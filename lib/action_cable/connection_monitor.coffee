@@ -1,6 +1,8 @@
 INTERNAL = require('./internal')
 
 class ConnectionMonitor
+  mixins: [Subscribable.Mixin]
+
   @pollInterval:
     min: 3
     max: 30
@@ -32,11 +34,13 @@ class ConnectionMonitor
     delete @stoppedAt
     @startedAt = now()
     @poll()
-    document.addEventListener('visibilitychange', @visibilityDidChange)
+    console.log 'subscribe'
+    # @appComponent.addEventListener('visibilitychange', @visibilityDidChange)
 
   stop: ->
     @stoppedAt = now()
-    document.removeEventListener('visibilitychange', @visibilityDidChange)
+    console.log 'un-subscribe'
+    # @appComponent.removeEventListener('visibilitychange', @visibilityDidChange)
 
   poll: ->
     setTimeout =>
@@ -63,7 +67,7 @@ class ConnectionMonitor
     @disconnectedAt and secondsSince(@disconnectedAt) < @constructor.staleThreshold
 
   visibilityDidChange: =>
-    if document.visibilityState is 'visible'
+    if @appComponent.visibilityState is 'visible'
       setTimeout =>
         if @connectionIsStale() or not @consumer.connection.isOpen()
           @consumer.connection.reopen()

@@ -1,8 +1,8 @@
 Consumer = require('./consumer')
 
 ActionCable =
-  createConsumer: (url) ->
-    new Consumer @createWebSocketURL(url)
+  createConsumer: (url, appComponent) ->
+    new Consumer(@createWebSocketURL(url), appComponent)
 
   createWebSocketURL: (url) ->
     if url and not /^wss?:/i.test(url)

@@ -4,7 +4,7 @@ Subscriptions = require('./subscriptions')
 Subscription = require('./subscription')
 
 class Consumer
-  constructor: (@url) ->
+  constructor: (@url, @appComponent) ->
     @subscriptions = new Subscriptions(@)
     @connection = new Connection(@)
     @connectionMonitor = new ConnectionMonitor(@)
