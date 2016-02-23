@@ -1,7 +1,7 @@
 INTERNAL = require('./internal')
 
 class ConnectionMonitor
-  mixins: [Subscribable.Mixin]
+  # mixins: [Subscribable.Mixin]
 
   @pollInterval:
     min: 3
