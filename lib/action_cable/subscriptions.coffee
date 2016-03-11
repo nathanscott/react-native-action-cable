@@ -58,10 +58,7 @@ class Subscriptions
 
   sendCommand: (subscription, command) ->
     {identifier} = subscription
-    if identifier is INTERNAL.identifiers.ping
-      @consumer.connection.isOpen()
-    else
-      @consumer.send({command, identifier})
+    @consumer.send({command, identifier})
 
   record: (data) ->
     data.time = new Date()

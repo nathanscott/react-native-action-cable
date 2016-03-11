@@ -9,10 +9,7 @@ class ConnectionMonitor
 
   @staleThreshold: 6 # Server::Connections::BEAT_INTERVAL * 2 (missed two pings)
 
-  identifier: INTERNAL.identifiers.ping
-
   constructor: (@consumer) ->
-    @consumer.subscriptions.add(@)
     @start()
 
   connected: ->
@@ -23,11 +20,12 @@ class ConnectionMonitor
   disconnected: ->
     @disconnectedAt = now()
 
-  received: ->
+  ping: ->
     @pingedAt = now()
 
   reset: ->
     @reconnectAttempts = 0
+    @consumer.connection.isOpen()
 
   start: ->
     @reset()

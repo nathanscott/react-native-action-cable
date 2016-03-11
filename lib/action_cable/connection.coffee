@@ -1,4 +1,4 @@
-message_types = require('./internal').message_types
+{ message_types } = require('./internal')
 
 class Connection
   @reopenDelay: 500
@@ -64,6 +64,10 @@ class Connection
           @consumer.subscriptions.notify(identifier, 'connected')
         when message_types.rejection
           @consumer.subscriptions.reject(identifier)
+        when message_types.welcome
+          @consumer.connectionMonitor.connected()
+        when message_types.ping
+          @consumer.connectionMonitor.ping()
         else
           @consumer.subscriptions.notify(identifier, 'received', message)
 
