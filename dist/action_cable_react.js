@@ -221,6 +221,10 @@
 	          return this.consumer.subscriptions.notify(identifier, 'connected');
 	        case message_types.rejection:
 	          return this.consumer.subscriptions.reject(identifier);
+	        case message_types.welcome:
+	          return this.consumer.connectionMonitor.connected();
+	        case message_types.ping:
+	          return this.consumer.connectionMonitor.ping();
 	        default:
 	          return this.consumer.subscriptions.notify(identifier, 'received', message);
 	      }
@@ -263,10 +267,9 @@
 /***/ function(module, exports) {
 
 	module.exports = {
-	  identifiers: {
-	    ping: '_ping'
-	  },
 	  message_types: {
+	    welcome: 'welcome',
+	    ping: 'ping',
 	    confirmation: 'confirm_subscription',
 	    rejection: 'reject_subscription'
 	  }
@@ -292,12 +295,9 @@
 
 	  ConnectionMonitor.staleThreshold = 6;
 
-	  ConnectionMonitor.prototype.identifier = INTERNAL.identifiers.ping;
-
 	  function ConnectionMonitor(consumer) {
 	    this.consumer = consumer;
 	    this.visibilityDidChange = bind(this.visibilityDidChange, this);
-	    this.consumer.subscriptions.add(this);
 	    this.start();
 	  }
 
@@ -311,12 +311,13 @@
 	    return this.disconnectedAt = now();
 	  };
 
-	  ConnectionMonitor.prototype.received = function() {
+	  ConnectionMonitor.prototype.ping = function() {
 	    return this.pingedAt = now();
 	  };
 
 	  ConnectionMonitor.prototype.reset = function() {
-	    return this.reconnectAttempts = 0;
+	    this.reconnectAttempts = 0;
+	    return this.consumer.connection.isOpen();
 	  };
 
 	  ConnectionMonitor.prototype.start = function() {
@@ -550,14 +551,10 @@
 	  Subscriptions.prototype.sendCommand = function(subscription, command) {
 	    var identifier;
 	    identifier = subscription.identifier;
-	    if (identifier === INTERNAL.identifiers.ping) {
-	      return this.consumer.connection.isOpen();
-	    } else {
-	      return this.consumer.send({
-	        command: command,
-	        identifier: identifier
-	      });
-	    }
+	    return this.consumer.send({
+	      command: command,
+	      identifier: identifier
+	    });
 	  };
 
 	  Subscriptions.prototype.record = function(data) {

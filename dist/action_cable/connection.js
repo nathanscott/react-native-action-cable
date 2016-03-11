@@ -92,6 +92,10 @@ Connection = (function() {
           return this.consumer.subscriptions.notify(identifier, 'connected');
         case message_types.rejection:
           return this.consumer.subscriptions.reject(identifier);
+        case message_types.welcome:
+          return this.consumer.connectionMonitor.connected();
+        case message_types.ping:
+          return this.consumer.connectionMonitor.ping();
         default:
           return this.consumer.subscriptions.notify(identifier, 'received', message);
       }

@@ -13,12 +13,9 @@ ConnectionMonitor = (function() {
 
   ConnectionMonitor.staleThreshold = 6;
 
-  ConnectionMonitor.prototype.identifier = INTERNAL.identifiers.ping;
-
   function ConnectionMonitor(consumer) {
     this.consumer = consumer;
     this.visibilityDidChange = bind(this.visibilityDidChange, this);
-    this.consumer.subscriptions.add(this);
     this.start();
   }
 
@@ -32,12 +29,13 @@ ConnectionMonitor = (function() {
     return this.disconnectedAt = now();
   };
 
-  ConnectionMonitor.prototype.received = function() {
+  ConnectionMonitor.prototype.ping = function() {
     return this.pingedAt = now();
   };
 
   ConnectionMonitor.prototype.reset = function() {
-    return this.reconnectAttempts = 0;
+    this.reconnectAttempts = 0;
+    return this.consumer.connection.isOpen();
   };
 
   ConnectionMonitor.prototype.start = function() {

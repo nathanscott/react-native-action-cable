@@ -131,14 +131,10 @@ Subscriptions = (function() {
   Subscriptions.prototype.sendCommand = function(subscription, command) {
     var identifier;
     identifier = subscription.identifier;
-    if (identifier === INTERNAL.identifiers.ping) {
-      return this.consumer.connection.isOpen();
-    } else {
-      return this.consumer.send({
-        command: command,
-        identifier: identifier
-      });
-    }
+    return this.consumer.send({
+      command: command,
+      identifier: identifier
+    });
   };
 
   Subscriptions.prototype.record = function(data) {
