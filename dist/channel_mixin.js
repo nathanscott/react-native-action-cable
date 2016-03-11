@@ -1,1 +1,106 @@
-var ChannelMixin,_capitalize;_capitalize=require("lodash.capitalize"),ChannelMixin=function(){var n;return n=Array.prototype.slice.call(arguments),{componentDidMount:function(){var e,t,i,l,h,c,a;for(i=this.props.cable||this.context.cable,this.mounted=!0,a=[],h=0,c=n.length;c>h;h++)l=n[h],i.channel(l)?(null!=this.handleConnected&&i.channel(l).on("connected",this.handleConnected),null!=this.handleDisconnected&&i.channel(l).on("disconnected",this.handleDisconnected),null!=this.handleDisconnected&&i.channel(l).on("rejected",this.handleDisconnected),null!=this.handleReceived&&i.channel(l).on("received",this.handleReceived),a.push(function(){var n,h,c,a;for(c=i.channel(l).actions,a=[],n=0,h=c.length;h>n;n++)e=c[n],t="handle"+_capitalize(e),null!=this[t]?a.push(i.channel(l).on(e,this[t])):a.push(void 0);return a}.call(this))):a.push(void 0);return a},componentWillUnmount:function(){var e,t,i,l,h,c,a;for(i=this.props.cable||this.context.cable,this.mounted=!1,a=[],h=0,c=n.length;c>h;h++)l=n[h],i.channel(l)?(null!=this.handleConnected&&i.channel(l).removeListener("connected",this.handleConnected),null!=this.handleDisconnected&&i.channel(l).removeListener("disconnected",this.handleDisconnected),null!=this.handleDisconnected&&i.channel(l).removeListener("rejected",this.handleDisconnected),null!=this.handleReceived&&i.channel(l).removeListener("received",this.handleReceived),a.push(function(){var n,h,c,a;for(c=i.channel(l).actions,a=[],n=0,h=c.length;h>n;n++)e=c[n],t="handle"+_capitalize(e),null!=this[t]?a.push(i.channel(l).removeListener(e,this[t])):a.push(void 0);return a}.call(this))):a.push(void 0);return a},perform:function(n,e,t){var i;return null==t&&(t={}),i=this.props.cable||this.context.cable,i.channel(n).perform(e,t)}}},ChannelMixin.componentWillMount=function(){throw new Error('ActionCableReact.ChannelMixin is a function that takes one or more store names as parameters and returns the mixin, e.g.: mixins: [ActionCableReact.ChannelMixin("Channel1", "Channel2")]')},module.exports=ChannelMixin;
+var ChannelMixin, _capitalize;
+
+_capitalize = require('lodash.capitalize');
+
+ChannelMixin = function() {
+  var channelNames;
+  channelNames = Array.prototype.slice.call(arguments);
+  return {
+    componentDidMount: function() {
+      var action, actionMethod, cable, channel, i, len, results;
+      cable = this.props.cable || this.context.cable;
+      this.mounted = true;
+      results = [];
+      for (i = 0, len = channelNames.length; i < len; i++) {
+        channel = channelNames[i];
+        if (cable.channel(channel)) {
+          if (this.handleConnected != null) {
+            cable.channel(channel).on('connected', this.handleConnected);
+          }
+          if (this.handleDisconnected != null) {
+            cable.channel(channel).on('disconnected', this.handleDisconnected);
+          }
+          if (this.handleDisconnected != null) {
+            cable.channel(channel).on('rejected', this.handleDisconnected);
+          }
+          if (this.handleReceived != null) {
+            cable.channel(channel).on('received', this.handleReceived);
+          }
+          results.push((function() {
+            var j, len1, ref, results1;
+            ref = cable.channel(channel).actions;
+            results1 = [];
+            for (j = 0, len1 = ref.length; j < len1; j++) {
+              action = ref[j];
+              actionMethod = "handle" + (_capitalize(action));
+              if (this[actionMethod] != null) {
+                results1.push(cable.channel(channel).on(action, this[actionMethod]));
+              } else {
+                results1.push(void 0);
+              }
+            }
+            return results1;
+          }).call(this));
+        } else {
+          results.push(void 0);
+        }
+      }
+      return results;
+    },
+    componentWillUnmount: function() {
+      var action, actionMethod, cable, channel, i, len, results;
+      cable = this.props.cable || this.context.cable;
+      this.mounted = false;
+      results = [];
+      for (i = 0, len = channelNames.length; i < len; i++) {
+        channel = channelNames[i];
+        if (cable.channel(channel)) {
+          if (this.handleConnected != null) {
+            cable.channel(channel).removeListener('connected', this.handleConnected);
+          }
+          if (this.handleDisconnected != null) {
+            cable.channel(channel).removeListener('disconnected', this.handleDisconnected);
+          }
+          if (this.handleDisconnected != null) {
+            cable.channel(channel).removeListener('rejected', this.handleDisconnected);
+          }
+          if (this.handleReceived != null) {
+            cable.channel(channel).removeListener('received', this.handleReceived);
+          }
+          results.push((function() {
+            var j, len1, ref, results1;
+            ref = cable.channel(channel).actions;
+            results1 = [];
+            for (j = 0, len1 = ref.length; j < len1; j++) {
+              action = ref[j];
+              actionMethod = "handle" + (_capitalize(action));
+              if (this[actionMethod] != null) {
+                results1.push(cable.channel(channel).removeListener(action, this[actionMethod]));
+              } else {
+                results1.push(void 0);
+              }
+            }
+            return results1;
+          }).call(this));
+        } else {
+          results.push(void 0);
+        }
+      }
+      return results;
+    },
+    perform: function(channel, action, data) {
+      var cable;
+      if (data == null) {
+        data = {};
+      }
+      cable = this.props.cable || this.context.cable;
+      return cable.channel(channel).perform(action, data);
+    }
+  };
+};
+
+ChannelMixin.componentWillMount = function() {
+  throw new Error('ActionCableReact.ChannelMixin is a function that takes one or more ' + 'store names as parameters and returns the mixin, e.g.: ' + 'mixins: [ActionCableReact.ChannelMixin("Channel1", "Channel2")]');
+};
+
+module.exports = ChannelMixin;

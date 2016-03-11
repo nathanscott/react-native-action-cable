@@ -1,1 +1,129 @@
-var Connection,message_types,bind=function(e,t){return function(){return e.apply(t,arguments)}},slice=[].slice,indexOf=[].indexOf||function(e){for(var t=0,n=this.length;n>t;t++)if(t in this&&this[t]===e)return t;return-1};message_types=require("./internal").message_types,Connection=function(){function e(e){this.consumer=e,this.open=bind(this.open,this),this.open()}return e.reopenDelay=500,e.prototype.send=function(e){return console.log("Connection: send "+e),this.isOpen()?(this.webSocket.send(JSON.stringify(e)),!0):!1},e.prototype.open=function(){if(console.log("Connection: open"),this.webSocket&&!this.isState("closed"))throw console.log("Connection: open 1"),new Error("Existing connection must be closed before opening");return console.log("Connection: open 2"),this.webSocket=new WebSocket(this.consumer.url),this.installEventHandlers(),!0},e.prototype.close=function(){var e;return null!=(e=this.webSocket)?e.close():void 0},e.prototype.reopen=function(){if(this.isState("closed"))return this.open();try{return this.close()}finally{setTimeout(this.open,this.constructor.reopenDelay)}},e.prototype.isOpen=function(){return this.isState("open")},e.prototype.isState=function(){var e,t;return t=1<=arguments.length?slice.call(arguments,0):[],e=this.getState(),indexOf.call(t,e)>=0},e.prototype.getState=function(){var e,t,n;for(t in WebSocket)if(n=WebSocket[t],n===(null!=(e=this.webSocket)?e.readyState:void 0))return t.toLowerCase();return null},e.prototype.installEventHandlers=function(){var e,t;for(e in this.events)t=this.events[e].bind(this),this.webSocket["on"+e]=t},e.prototype.events={message:function(e){var t,n,o,i;switch(o=JSON.parse(e.data),t=o.identifier,n=o.message,i=o.type,i){case message_types.confirmation:return this.consumer.subscriptions.notify(t,"connected");case message_types.rejection:return this.consumer.subscriptions.reject(t);default:return this.consumer.subscriptions.notify(t,"received",n)}},open:function(){return this.disconnected=!1,this.consumer.subscriptions.reload()},close:function(){return this.disconnect()},error:function(){return this.disconnect()}},e.prototype.disconnect=function(){return this.disconnected?void 0:(this.disconnected=!0,this.consumer.subscriptions.notifyAll("disconnected"))},e.prototype.toJSON=function(){return{state:this.getState()}},e}(),module.exports=Connection;
+var Connection, message_types,
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  slice = [].slice,
+  indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
+message_types = require('./internal').message_types;
+
+Connection = (function() {
+  Connection.reopenDelay = 500;
+
+  function Connection(consumer) {
+    this.consumer = consumer;
+    this.open = bind(this.open, this);
+    this.open();
+  }
+
+  Connection.prototype.send = function(data) {
+    console.log("Connection: send " + data);
+    if (this.isOpen()) {
+      this.webSocket.send(JSON.stringify(data));
+      return true;
+    } else {
+      return false;
+    }
+  };
+
+  Connection.prototype.open = function() {
+    console.log("Connection: open");
+    if (this.webSocket && !this.isState('closed')) {
+      console.log("Connection: open 1");
+      throw new Error('Existing connection must be closed before opening');
+    } else {
+      console.log("Connection: open 2");
+      this.webSocket = new WebSocket(this.consumer.url);
+      this.installEventHandlers();
+      return true;
+    }
+  };
+
+  Connection.prototype.close = function() {
+    var ref;
+    return (ref = this.webSocket) != null ? ref.close() : void 0;
+  };
+
+  Connection.prototype.reopen = function() {
+    if (this.isState('closed')) {
+      return this.open();
+    } else {
+      try {
+        return this.close();
+      } finally {
+        setTimeout(this.open, this.constructor.reopenDelay);
+      }
+    }
+  };
+
+  Connection.prototype.isOpen = function() {
+    return this.isState('open');
+  };
+
+  Connection.prototype.isState = function() {
+    var ref, states;
+    states = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+    return ref = this.getState(), indexOf.call(states, ref) >= 0;
+  };
+
+  Connection.prototype.getState = function() {
+    var ref, state, value;
+    for (state in WebSocket) {
+      value = WebSocket[state];
+      if (value === ((ref = this.webSocket) != null ? ref.readyState : void 0)) {
+        return state.toLowerCase();
+      }
+    }
+    return null;
+  };
+
+  Connection.prototype.installEventHandlers = function() {
+    var eventName, handler;
+    for (eventName in this.events) {
+      handler = this.events[eventName].bind(this);
+      this.webSocket["on" + eventName] = handler;
+    }
+  };
+
+  Connection.prototype.events = {
+    message: function(event) {
+      var identifier, message, ref, type;
+      ref = JSON.parse(event.data), identifier = ref.identifier, message = ref.message, type = ref.type;
+      switch (type) {
+        case message_types.confirmation:
+          return this.consumer.subscriptions.notify(identifier, 'connected');
+        case message_types.rejection:
+          return this.consumer.subscriptions.reject(identifier);
+        default:
+          return this.consumer.subscriptions.notify(identifier, 'received', message);
+      }
+    },
+    open: function() {
+      this.disconnected = false;
+      return this.consumer.subscriptions.reload();
+    },
+    close: function() {
+      return this.disconnect();
+    },
+    error: function() {
+      return this.disconnect();
+    }
+  };
+
+  Connection.prototype.disconnect = function() {
+    if (this.disconnected) {
+      return;
+    }
+    this.disconnected = true;
+    return this.consumer.subscriptions.notifyAll('disconnected');
+  };
+
+  Connection.prototype.toJSON = function() {
+    return {
+      state: this.getState()
+    };
+  };
+
+  return Connection;
+
+})();
+
+module.exports = Connection;

@@ -11,15 +11,16 @@ gulp.task 'clean', ->
 gulp.task 'coffee', ['clean'], ->
   gulp.src('lib/**/*.coffee')
     .pipe(coffee(bare: true))
-    .pipe(uglify())
     .pipe(gulp.dest('dist'))
+    # .pipe(uglify())
+
 
 gulp.task 'bowerPack', ['clean'], ->
   gulp.src('bower.coffee')
     .pipe(webpack(require('./webpack.config.coffee')))
-    .pipe(uglify())
     .pipe(rename('action_cable_react.js'))
     .pipe(gulp.dest('dist'))
+    # .pipe(uglify())
 
 gulp.task 'default', [
   'coffee'

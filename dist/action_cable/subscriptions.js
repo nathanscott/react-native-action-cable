@@ -1,1 +1,171 @@
-var INTERNAL,Subscription,Subscriptions,slice=[].slice;INTERNAL=require("./internal"),Subscription=require("./subscription"),Subscriptions=function(){function t(t){this.consumer=t,this.subscriptions=[],this.history=[]}return t.prototype.create=function(t,i){var n,r;return n=t,r="object"==typeof n?n:{channel:n},new Subscription(this,r,i)},t.prototype.add=function(t){return this.subscriptions.push(t),this.notify(t,"initialized"),this.sendCommand(t,"subscribe")},t.prototype.remove=function(t){return this.forget(t),this.findAll(t.identifier).length?void 0:this.sendCommand(t,"unsubscribe")},t.prototype.reject=function(t){var i,n,r,e,s;for(r=this.findAll(t),e=[],i=0,n=r.length;n>i;i++)s=r[i],this.forget(s),e.push(this.notify(s,"rejected"));return e},t.prototype.forget=function(t){var i;return this.subscriptions=function(){var n,r,e,s;for(e=this.subscriptions,s=[],n=0,r=e.length;r>n;n++)i=e[n],i!==t&&s.push(i);return s}.call(this)},t.prototype.findAll=function(t){var i,n,r,e,s;for(r=this.subscriptions,e=[],i=0,n=r.length;n>i;i++)s=r[i],s.identifier===t&&e.push(s);return e},t.prototype.reload=function(){var t,i,n,r,e;for(n=this.subscriptions,r=[],t=0,i=n.length;i>t;t++)e=n[t],r.push(this.sendCommand(e,"subscribe"));return r},t.prototype.notifyAll=function(){var t,i,n,r,e,s,o;for(i=arguments[0],t=2<=arguments.length?slice.call(arguments,1):[],e=this.subscriptions,s=[],n=0,r=e.length;r>n;n++)o=e[n],s.push(this.notify.apply(this,[o,i].concat(slice.call(t))));return s},t.prototype.notify=function(){var t,i,n,r,e,s,o,c;for(o=arguments[0],i=arguments[1],t=3<=arguments.length?slice.call(arguments,2):[],c="string"==typeof o?this.findAll(o):[o],s=[],n=0,e=c.length;e>n;n++)o=c[n],"function"==typeof o[i]&&o[i].apply(o,t),"initialized"===i||"connected"===i||"disconnected"===i||"rejected"===i?(r=o.identifier,s.push(this.record({notification:{identifier:r,callbackName:i,args:t}}))):s.push(void 0);return s},t.prototype.sendCommand=function(t,i){var n;return n=t.identifier,n===INTERNAL.identifiers.ping?this.consumer.connection.isOpen():this.consumer.send({command:i,identifier:n})},t.prototype.record=function(t){return t.time=new Date,this.history=this.history.slice(-19),this.history.push(t)},t.prototype.toJSON=function(){var t;return{history:this.history,identifiers:function(){var i,n,r,e;for(r=this.subscriptions,e=[],i=0,n=r.length;n>i;i++)t=r[i],e.push(t.identifier);return e}.call(this)}},t}(),module.exports=Subscriptions;
+var INTERNAL, Subscription, Subscriptions,
+  slice = [].slice;
+
+INTERNAL = require('./internal');
+
+Subscription = require('./subscription');
+
+Subscriptions = (function() {
+  function Subscriptions(consumer) {
+    this.consumer = consumer;
+    this.subscriptions = [];
+    this.history = [];
+  }
+
+  Subscriptions.prototype.create = function(channelName, actions) {
+    var channel, params;
+    channel = channelName;
+    params = typeof channel === 'object' ? channel : {
+      channel: channel
+    };
+    return new Subscription(this, params, actions);
+  };
+
+  Subscriptions.prototype.add = function(subscription) {
+    this.subscriptions.push(subscription);
+    this.notify(subscription, 'initialized');
+    return this.sendCommand(subscription, 'subscribe');
+  };
+
+  Subscriptions.prototype.remove = function(subscription) {
+    this.forget(subscription);
+    if (!this.findAll(subscription.identifier).length) {
+      return this.sendCommand(subscription, 'unsubscribe');
+    }
+  };
+
+  Subscriptions.prototype.reject = function(identifier) {
+    var i, len, ref, results, subscription;
+    ref = this.findAll(identifier);
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      subscription = ref[i];
+      this.forget(subscription);
+      results.push(this.notify(subscription, 'rejected'));
+    }
+    return results;
+  };
+
+  Subscriptions.prototype.forget = function(subscription) {
+    var s;
+    return this.subscriptions = (function() {
+      var i, len, ref, results;
+      ref = this.subscriptions;
+      results = [];
+      for (i = 0, len = ref.length; i < len; i++) {
+        s = ref[i];
+        if (s !== subscription) {
+          results.push(s);
+        }
+      }
+      return results;
+    }).call(this);
+  };
+
+  Subscriptions.prototype.findAll = function(identifier) {
+    var i, len, ref, results, s;
+    ref = this.subscriptions;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      s = ref[i];
+      if (s.identifier === identifier) {
+        results.push(s);
+      }
+    }
+    return results;
+  };
+
+  Subscriptions.prototype.reload = function() {
+    var i, len, ref, results, subscription;
+    ref = this.subscriptions;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      subscription = ref[i];
+      results.push(this.sendCommand(subscription, 'subscribe'));
+    }
+    return results;
+  };
+
+  Subscriptions.prototype.notifyAll = function() {
+    var args, callbackName, i, len, ref, results, subscription;
+    callbackName = arguments[0], args = 2 <= arguments.length ? slice.call(arguments, 1) : [];
+    ref = this.subscriptions;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      subscription = ref[i];
+      results.push(this.notify.apply(this, [subscription, callbackName].concat(slice.call(args))));
+    }
+    return results;
+  };
+
+  Subscriptions.prototype.notify = function() {
+    var args, callbackName, i, identifier, len, results, subscription, subscriptions;
+    subscription = arguments[0], callbackName = arguments[1], args = 3 <= arguments.length ? slice.call(arguments, 2) : [];
+    if (typeof subscription === 'string') {
+      subscriptions = this.findAll(subscription);
+    } else {
+      subscriptions = [subscription];
+    }
+    results = [];
+    for (i = 0, len = subscriptions.length; i < len; i++) {
+      subscription = subscriptions[i];
+      if (typeof subscription[callbackName] === "function") {
+        subscription[callbackName].apply(subscription, args);
+      }
+      if (callbackName === 'initialized' || callbackName === 'connected' || callbackName === 'disconnected' || callbackName === 'rejected') {
+        identifier = subscription.identifier;
+        results.push(this.record({
+          notification: {
+            identifier: identifier,
+            callbackName: callbackName,
+            args: args
+          }
+        }));
+      } else {
+        results.push(void 0);
+      }
+    }
+    return results;
+  };
+
+  Subscriptions.prototype.sendCommand = function(subscription, command) {
+    var identifier;
+    identifier = subscription.identifier;
+    if (identifier === INTERNAL.identifiers.ping) {
+      return this.consumer.connection.isOpen();
+    } else {
+      return this.consumer.send({
+        command: command,
+        identifier: identifier
+      });
+    }
+  };
+
+  Subscriptions.prototype.record = function(data) {
+    data.time = new Date();
+    this.history = this.history.slice(-19);
+    return this.history.push(data);
+  };
+
+  Subscriptions.prototype.toJSON = function() {
+    var subscription;
+    return {
+      history: this.history,
+      identifiers: (function() {
+        var i, len, ref, results;
+        ref = this.subscriptions;
+        results = [];
+        for (i = 0, len = ref.length; i < len; i++) {
+          subscription = ref[i];
+          results.push(subscription.identifier);
+        }
+        return results;
+      }).call(this)
+    };
+  };
+
+  return Subscriptions;
+
+})();
+
+module.exports = Subscriptions;
