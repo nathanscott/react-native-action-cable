@@ -5,6 +5,8 @@
 
 Use Rails 5 ActionCable channels with React Native for realtime magic.
 
+This is a fork from https://github.com/schneidmaster/action-cable-react
+
 ## Overview
 
 action-cable-react is a npm/bower package to bind one or more [ActionCable](https://github.com/rails/rails/tree/master/actioncable) channels to React components. This allows you to define how each individual component should respond to new messages from each channel, bringing ActionCable nicely in line with the React data model and permitting usage with a Rails API and standalone frontend React application.
