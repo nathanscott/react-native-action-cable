@@ -1,4 +1,4 @@
-var Connection, i, message_types, protocols, ref, supportedProtocols, unsupportedProtocol,
+var Connection, ConnectionMonitor, i, message_types, protocols, ref, supportedProtocols, unsupportedProtocol,
   slice = [].slice,
   bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
@@ -6,6 +6,8 @@ var Connection, i, message_types, protocols, ref, supportedProtocols, unsupporte
 ref = require('./internal'), message_types = ref.message_types, protocols = ref.protocols;
 
 supportedProtocols = 2 <= protocols.length ? slice.call(protocols, 0, i = protocols.length - 1) : (i = 0, []), unsupportedProtocol = protocols[i++];
+
+ConnectionMonitor = require('./connection_monitor');
 
 Connection = (function() {
   Connection.reopenDelay = 500;

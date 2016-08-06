@@ -1,6 +1,8 @@
 {message_types, protocols} = require('./internal')
 [supportedProtocols..., unsupportedProtocol] = protocols
 
+ConnectionMonitor = require('./connection_monitor')
+
 class Connection
   @reopenDelay: 500
 

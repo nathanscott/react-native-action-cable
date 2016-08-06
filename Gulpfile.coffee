@@ -22,9 +22,10 @@ gulp.task 'bowerPack', ['clean'], ->
     .pipe(gulp.dest('dist'))
     # .pipe(uglify())
 
+# NOTE: DISABLE bower SINCE USING NPM
 gulp.task 'default', [
   'coffee'
-  'bowerPack'
+  # 'bowerPack'
 ]
 
 gulp.task 'watch', ->

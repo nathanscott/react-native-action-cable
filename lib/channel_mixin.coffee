@@ -39,8 +39,8 @@ ChannelMixin = ->
   }
 
 ChannelMixin.componentWillMount = ->
-  throw new Error('ActionCableReact.ChannelMixin is a function that takes one or more ' + 
-    'store names as parameters and returns the mixin, e.g.: ' + 
+  throw new Error('ActionCableReact.ChannelMixin is a function that takes one or more ' +
+    'store names as parameters and returns the mixin, e.g.: ' +
     'mixins: [ActionCableReact.ChannelMixin("Channel1", "Channel2")]'
   )
 

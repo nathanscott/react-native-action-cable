@@ -7,7 +7,7 @@ CableMixin = (React) ->
   childContextTypes:
     cable:
       React.PropTypes.object
-  
+
   contextTypes:
     cable:
       React.PropTypes.object
@@ -16,12 +16,12 @@ CableMixin = (React) ->
     {
       cable: @getCable()
     }
-  
+
   getCable: ->
     @props.cable or @context and @context.cable
 
 CableMixin.componentWillMount = ->
-  throw new Error('ActionCableReact.CableMixin is a function that takes React as a ' + 
+  throw new Error('ActionCableReact.CableMixin is a function that takes React as a ' +
     'parameter and returns the mixin, e.g.: mixins: [ActionCableReact.CableMixin(React)]'
   )
 

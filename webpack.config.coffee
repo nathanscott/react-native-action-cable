@@ -1,4 +1,4 @@
-module.exports = 
+module.exports =
   module:
     loaders: [
       {
@@ -7,4 +7,6 @@ module.exports =
       }
     ]
   resolve:
-    extensions: ['', '.js', '.json', '.coffee'] 
+    extensions: ['', '.coffee', '.js']
+  stats:
+    errorDetails: true
