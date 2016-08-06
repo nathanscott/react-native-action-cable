@@ -1,21 +1,23 @@
 Connection = require('./connection')
-ConnectionMonitor = require('./connection_monitor')
 Subscriptions = require('./subscriptions')
 Subscription = require('./subscription')
 
 class Consumer
-  constructor: (@url, @appComponent) ->
+  constructor: (@url) ->
     @subscriptions = new Subscriptions(@)
     @connection = new Connection(@)
-    @connectionMonitor = new ConnectionMonitor(@)
 
   send: (data) ->
     @connection.send(data)
 
-  inspect: ->
-    JSON.stringify(@, null, 2)
+  connect: ->
+    @connection.open()
 
-  toJSON: ->
-    { @url, @subscriptions, @connection, @connectionMonitor }
+  disconnect: ->
+    @connection.close(allowReconnect: false)
+
+  ensureActiveConnection: ->
+    unless @connection.isActive()
+      @connection.open()
 
 module.exports = Consumer

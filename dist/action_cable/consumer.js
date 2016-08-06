@@ -1,37 +1,36 @@
-var Connection, ConnectionMonitor, Consumer, Subscription, Subscriptions;
+var Connection, Consumer, Subscription, Subscriptions;
 
 Connection = require('./connection');
-
-ConnectionMonitor = require('./connection_monitor');
 
 Subscriptions = require('./subscriptions');
 
 Subscription = require('./subscription');
 
 Consumer = (function() {
-  function Consumer(url, appComponent) {
+  function Consumer(url) {
     this.url = url;
-    this.appComponent = appComponent;
     this.subscriptions = new Subscriptions(this);
     this.connection = new Connection(this);
-    this.connectionMonitor = new ConnectionMonitor(this);
   }
 
   Consumer.prototype.send = function(data) {
     return this.connection.send(data);
   };
 
-  Consumer.prototype.inspect = function() {
-    return JSON.stringify(this, null, 2);
+  Consumer.prototype.connect = function() {
+    return this.connection.open();
   };
 
-  Consumer.prototype.toJSON = function() {
-    return {
-      url: this.url,
-      subscriptions: this.subscriptions,
-      connection: this.connection,
-      connectionMonitor: this.connectionMonitor
-    };
+  Consumer.prototype.disconnect = function() {
+    return this.connection.close({
+      allowReconnect: false
+    });
+  };
+
+  Consumer.prototype.ensureActiveConnection = function() {
+    if (!this.connection.isActive()) {
+      return this.connection.open();
+    }
   };
 
   return Consumer;

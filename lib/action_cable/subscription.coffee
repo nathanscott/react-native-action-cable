@@ -1,10 +1,7 @@
-EventEmitter = require('eventemitter3')
-
-class Subscription extends EventEmitter
-  constructor: (@subscriptions, params = {}, @actions = []) ->
+class Subscription
+  constructor: (@consumer, params = {}, mixin) ->
     @identifier = JSON.stringify(params)
-    @subscriptions.add(@)
-    @consumer = @subscriptions.consumer
+    extend(@, mixin)
 
   # Perform a channel action with the optional data passed as an attribute
   perform: (action, data = {}) ->
@@ -15,21 +12,12 @@ class Subscription extends EventEmitter
     @consumer.send(command: 'message', identifier: @identifier, data: JSON.stringify(data))
 
   unsubscribe: ->
-    @subscriptions.remove(@)
+    @consumer.subscriptions.remove(this)
 
-  connected: ->
-    @emit('connected')
-
-  disconnected: ->
-    @emit('disconnected')
-
-  rejected: ->
-    @emit('rejected')
-
-  received: (data) ->
-    if data.action in @actions
-      @emit(data.action, data)
-    else
-      @emit('received', data)
+  extend = (object, properties) ->
+    if properties?
+      for key, value of properties
+        object[key] = value
+    object
 
 module.exports = Subscription

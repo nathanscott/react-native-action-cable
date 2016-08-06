@@ -9,29 +9,32 @@ Subscriptions = (function() {
   function Subscriptions(consumer) {
     this.consumer = consumer;
     this.subscriptions = [];
-    this.history = [];
   }
 
-  Subscriptions.prototype.create = function(channelName, actions) {
-    var channel, params;
+  Subscriptions.prototype.create = function(channelName, mixin) {
+    var channel, params, subscription;
     channel = channelName;
     params = typeof channel === 'object' ? channel : {
       channel: channel
     };
-    return new Subscription(this, params, actions);
+    subscription = new Subscription(this.consumer, params, mixin);
+    return this.add(subscription);
   };
 
   Subscriptions.prototype.add = function(subscription) {
     this.subscriptions.push(subscription);
-    this.notify(subscription, 'initialized');
-    return this.sendCommand(subscription, 'subscribe');
+    this.consumer.ensureActiveConnection();
+    this.notify(subscription, "initialized");
+    this.sendCommand(subscription, "subscribe");
+    return subscription;
   };
 
   Subscriptions.prototype.remove = function(subscription) {
     this.forget(subscription);
     if (!this.findAll(subscription.identifier).length) {
-      return this.sendCommand(subscription, 'unsubscribe');
+      this.sendCommand(subscription, "unsubscribe");
     }
+    return subscription;
   };
 
   Subscriptions.prototype.reject = function(identifier) {
@@ -41,14 +44,15 @@ Subscriptions = (function() {
     for (i = 0, len = ref.length; i < len; i++) {
       subscription = ref[i];
       this.forget(subscription);
-      results.push(this.notify(subscription, 'rejected'));
+      this.notify(subscription, "rejected");
+      results.push(subscription);
     }
     return results;
   };
 
   Subscriptions.prototype.forget = function(subscription) {
     var s;
-    return this.subscriptions = (function() {
+    this.subscriptions = (function() {
       var i, len, ref, results;
       ref = this.subscriptions;
       results = [];
@@ -60,6 +64,7 @@ Subscriptions = (function() {
       }
       return results;
     }).call(this);
+    return subscription;
   };
 
   Subscriptions.prototype.findAll = function(identifier) {
@@ -81,7 +86,7 @@ Subscriptions = (function() {
     results = [];
     for (i = 0, len = ref.length; i < len; i++) {
       subscription = ref[i];
-      results.push(this.sendCommand(subscription, 'subscribe'));
+      results.push(this.sendCommand(subscription, "subscribe"));
     }
     return results;
   };
@@ -99,9 +104,9 @@ Subscriptions = (function() {
   };
 
   Subscriptions.prototype.notify = function() {
-    var args, callbackName, i, identifier, len, results, subscription, subscriptions;
+    var args, callbackName, i, len, results, subscription, subscriptions;
     subscription = arguments[0], callbackName = arguments[1], args = 3 <= arguments.length ? slice.call(arguments, 2) : [];
-    if (typeof subscription === 'string') {
+    if (typeof subscription === "string") {
       subscriptions = this.findAll(subscription);
     } else {
       subscriptions = [subscription];
@@ -109,21 +114,7 @@ Subscriptions = (function() {
     results = [];
     for (i = 0, len = subscriptions.length; i < len; i++) {
       subscription = subscriptions[i];
-      if (typeof subscription[callbackName] === "function") {
-        subscription[callbackName].apply(subscription, args);
-      }
-      if (callbackName === 'initialized' || callbackName === 'connected' || callbackName === 'disconnected' || callbackName === 'rejected') {
-        identifier = subscription.identifier;
-        results.push(this.record({
-          notification: {
-            identifier: identifier,
-            callbackName: callbackName,
-            args: args
-          }
-        }));
-      } else {
-        results.push(void 0);
-      }
+      results.push(typeof subscription[callbackName] === "function" ? subscription[callbackName].apply(subscription, args) : void 0);
     }
     return results;
   };
@@ -135,29 +126,6 @@ Subscriptions = (function() {
       command: command,
       identifier: identifier
     });
-  };
-
-  Subscriptions.prototype.record = function(data) {
-    data.time = new Date();
-    this.history = this.history.slice(-19);
-    return this.history.push(data);
-  };
-
-  Subscriptions.prototype.toJSON = function() {
-    var subscription;
-    return {
-      history: this.history,
-      identifiers: (function() {
-        var i, len, ref, results;
-        ref = this.subscriptions;
-        results = [];
-        for (i = 0, len = ref.length; i < len; i++) {
-          subscription = ref[i];
-          results.push(subscription.identifier);
-        }
-        return results;
-      }).call(this)
-    };
   };
 
   return Subscriptions;

@@ -1,12 +1,27 @@
 Consumer = require('./consumer')
 
 ActionCable =
-  createConsumer: (url, appComponent) ->
-    new Consumer(@createWebSocketURL(url), appComponent)
+  INTERNAL: require('./internal')
+  WebSocket: window.WebSocket
+  logger: window.console
+
+  createConsumer: (url) ->
+    new Consumer(@createWebSocketURL(url))
 
   createWebSocketURL: (url) ->
     if url and not /^wss?:/i.test(url)
       url = url.replace('http', 'ws')
     url
+
+  startDebugging: ->
+    @debugging = true
+
+  stopDebugging: ->
+    @debugging = null
+
+  log: (messages...) ->
+    if @debugging
+      messages.push(Date.now())
+      @logger.log("[ActionCable]", messages...)
 
 module.exports = ActionCable

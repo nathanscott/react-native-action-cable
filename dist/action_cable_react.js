@@ -46,10 +46,10 @@
 
 	window.ActionCableReact = {
 	  ActionCable: __webpack_require__(1),
-	  Cable: __webpack_require__(9),
-	  CableMixin: __webpack_require__(10),
-	  ChannelMixin: __webpack_require__(11),
-	  version: __webpack_require__(14)
+	  Cable: __webpack_require__(7),
+	  CableMixin: __webpack_require__(8),
+	  ChannelMixin: __webpack_require__(9),
+	  version: __webpack_require__(12)
 	};
 
 
@@ -57,19 +57,37 @@
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var ActionCable, Consumer;
+	var ActionCable, Consumer,
+	  slice = [].slice;
 
 	Consumer = __webpack_require__(2);
 
 	ActionCable = {
-	  createConsumer: function(url, appComponent) {
-	    return new Consumer(this.createWebSocketURL(url), appComponent);
+	  INTERNAL: __webpack_require__(5),
+	  WebSocket: window.WebSocket,
+	  logger: window.console,
+	  createConsumer: function(url) {
+	    return new Consumer(this.createWebSocketURL(url));
 	  },
 	  createWebSocketURL: function(url) {
 	    if (url && !/^wss?:/i.test(url)) {
 	      url = url.replace('http', 'ws');
 	    }
 	    return url;
+	  },
+	  startDebugging: function() {
+	    return this.debugging = true;
+	  },
+	  stopDebugging: function() {
+	    return this.debugging = null;
+	  },
+	  log: function() {
+	    var messages, ref;
+	    messages = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+	    if (this.debugging) {
+	      messages.push(Date.now());
+	      return (ref = this.logger).log.apply(ref, ["[ActionCable]"].concat(slice.call(messages)));
+	    }
 	  }
 	};
 
@@ -80,40 +98,39 @@
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Connection, ConnectionMonitor, Consumer, Subscription, Subscriptions;
+	var Connection, Consumer, Subscription, Subscriptions;
 
 	Connection = __webpack_require__(3);
 
-	ConnectionMonitor = __webpack_require__(5);
+	Subscriptions = __webpack_require__(4);
 
-	Subscriptions = __webpack_require__(6);
-
-	Subscription = __webpack_require__(7);
+	Subscription = __webpack_require__(6);
 
 	Consumer = (function() {
-	  function Consumer(url, appComponent) {
+	  function Consumer(url) {
 	    this.url = url;
-	    this.appComponent = appComponent;
 	    this.subscriptions = new Subscriptions(this);
 	    this.connection = new Connection(this);
-	    this.connectionMonitor = new ConnectionMonitor(this);
 	  }
 
 	  Consumer.prototype.send = function(data) {
 	    return this.connection.send(data);
 	  };
 
-	  Consumer.prototype.inspect = function() {
-	    return JSON.stringify(this, null, 2);
+	  Consumer.prototype.connect = function() {
+	    return this.connection.open();
 	  };
 
-	  Consumer.prototype.toJSON = function() {
-	    return {
-	      url: this.url,
-	      subscriptions: this.subscriptions,
-	      connection: this.connection,
-	      connectionMonitor: this.connectionMonitor
-	    };
+	  Consumer.prototype.disconnect = function() {
+	    return this.connection.close({
+	      allowReconnect: false
+	    });
+	  };
+
+	  Consumer.prototype.ensureActiveConnection = function() {
+	    if (!this.connection.isActive()) {
+	      return this.connection.open();
+	    }
 	  };
 
 	  return Consumer;
@@ -127,12 +144,16 @@
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Connection, message_types,
-	  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+	var ActionCable, Connection, i, message_types, protocols, ref, supportedProtocols, unsupportedProtocol,
 	  slice = [].slice,
+	  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
 	  indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-	message_types = __webpack_require__(4).message_types;
+	ActionCable = __webpack_require__(1);
+
+	ref = __webpack_require__(1).INTERNAL, message_types = ref.message_types, protocols = ref.protocols;
+
+	supportedProtocols = 2 <= protocols.length ? slice.call(protocols, 0, i = protocols.length - 1) : (i = 0, []), unsupportedProtocol = protocols[i++];
 
 	Connection = (function() {
 	  Connection.reopenDelay = 500;
@@ -140,11 +161,12 @@
 	  function Connection(consumer) {
 	    this.consumer = consumer;
 	    this.open = bind(this.open, this);
-	    this.open();
+	    this.subscriptions = this.consumer.subscriptions;
+	    this.monitor = new ConnectionMonitor(this);
+	    this.disconnected = true;
 	  }
 
 	  Connection.prototype.send = function(data) {
-	    console.log("Connection: send " + data);
 	    if (this.isOpen()) {
 	      this.webSocket.send(JSON.stringify(data));
 	      return true;
@@ -154,50 +176,81 @@
 	  };
 
 	  Connection.prototype.open = function() {
-	    console.log("Connection: open");
-	    if (this.webSocket && !this.isState('closed')) {
-	      console.log("Connection: open 1");
-	      throw new Error('Existing connection must be closed before opening');
+	    if (this.isActive()) {
+	      ActionCable.log("Attempted to open WebSocket, but existing socket is " + (this.getState()));
+	      throw new Error("Existing connection must be closed before opening");
 	    } else {
-	      console.log("Connection: open 2");
-	      this.webSocket = new WebSocket(this.consumer.url);
+	      ActionCable.log("Opening WebSocket, current state is " + (this.getState()) + ", subprotocols: " + protocols);
+	      if (this.webSocket != null) {
+	        this.uninstallEventHandlers();
+	      }
+	      this.webSocket = new ActionCable.WebSocket(this.consumer.url, protocols);
 	      this.installEventHandlers();
+	      this.monitor.start();
 	      return true;
 	    }
 	  };
 
-	  Connection.prototype.close = function() {
-	    var ref;
-	    return (ref = this.webSocket) != null ? ref.close() : void 0;
-	  };
-
-	  Connection.prototype.reopen = function() {
-	    if (this.isState('closed')) {
-	      return this.open();
-	    } else {
-	      try {
-	        return this.close();
-	      } finally {
-	        setTimeout(this.open, this.constructor.reopenDelay);
-	      }
+	  Connection.prototype.close = function(arg) {
+	    var allowReconnect, ref1;
+	    allowReconnect = (arg != null ? arg : {
+	      allowReconnect: true
+	    }).allowReconnect;
+	    if (!allowReconnect) {
+	      this.monitor.stop();
+	    }
+	    if (this.isActive()) {
+	      return (ref1 = this.webSocket) != null ? ref1.close() : void 0;
 	    }
 	  };
 
+	  Connection.prototype.reopen = function() {
+	    var error, error1;
+	    ActionCable.log("Reopening WebSocket, current state is " + (this.getState()));
+	    if (this.isActive()) {
+	      try {
+	        return this.close();
+	      } catch (error1) {
+	        error = error1;
+	        return ActionCable.log("Failed to reopen WebSocket", error);
+	      } finally {
+	        ActionCable.log("Reopening WebSocket in " + this.constructor.reopenDelay + "ms");
+	        setTimeout(this.open, this.constructor.reopenDelay);
+	      }
+	    } else {
+	      return this.open();
+	    }
+	  };
+
+	  Connection.prototype.getProtocol = function() {
+	    var ref1;
+	    return (ref1 = this.webSocket) != null ? ref1.protocol : void 0;
+	  };
+
 	  Connection.prototype.isOpen = function() {
-	    return this.isState('open');
+	    return this.isState("open");
+	  };
+
+	  Connection.prototype.isActive = function() {
+	    return this.isState("open", "connecting");
+	  };
+
+	  Connection.prototype.isProtocolSupported = function() {
+	    var ref1;
+	    return ref1 = this.getProtocol(), indexOf.call(supportedProtocols, ref1) >= 0;
 	  };
 
 	  Connection.prototype.isState = function() {
-	    var ref, states;
+	    var ref1, states;
 	    states = 1 <= arguments.length ? slice.call(arguments, 0) : [];
-	    return ref = this.getState(), indexOf.call(states, ref) >= 0;
+	    return ref1 = this.getState(), indexOf.call(states, ref1) >= 0;
 	  };
 
 	  Connection.prototype.getState = function() {
-	    var ref, state, value;
+	    var ref1, state, value;
 	    for (state in WebSocket) {
 	      value = WebSocket[state];
-	      if (value === ((ref = this.webSocket) != null ? ref.readyState : void 0)) {
+	      if (value === ((ref1 = this.webSocket) != null ? ref1.readyState : void 0)) {
 	        return state.toLowerCase();
 	      }
 	    }
@@ -212,47 +265,58 @@
 	    }
 	  };
 
+	  Connection.prototype.uninstallEventHandlers = function() {
+	    var eventName;
+	    for (eventName in this.events) {
+	      this.webSocket["on" + eventName] = function() {};
+	    }
+	  };
+
 	  Connection.prototype.events = {
 	    message: function(event) {
-	      var identifier, message, ref, type;
-	      ref = JSON.parse(event.data), identifier = ref.identifier, message = ref.message, type = ref.type;
+	      var identifier, message, ref1, type;
+	      if (!this.isProtocolSupported()) {
+	        return;
+	      }
+	      ref1 = JSON.parse(event.data), identifier = ref1.identifier, message = ref1.message, type = ref1.type;
 	      switch (type) {
-	        case message_types.confirmation:
-	          return this.consumer.subscriptions.notify(identifier, 'connected');
-	        case message_types.rejection:
-	          return this.consumer.subscriptions.reject(identifier);
 	        case message_types.welcome:
-	          return this.consumer.connectionMonitor.connected();
+	          this.monitor.recordConnect();
+	          return this.subscriptions.reload();
 	        case message_types.ping:
-	          return this.consumer.connectionMonitor.ping();
+	          return this.monitor.recordPing();
+	        case message_types.confirmation:
+	          return this.subscriptions.notify(identifier, "connected");
+	        case message_types.rejection:
+	          return this.subscriptions.reject(identifier);
 	        default:
-	          return this.consumer.subscriptions.notify(identifier, 'received', message);
+	          return this.subscriptions.notify(identifier, "received", message);
 	      }
 	    },
 	    open: function() {
+	      ActionCable.log("WebSocket onopen event, using '" + (this.getProtocol()) + "' subprotocol");
 	      this.disconnected = false;
-	      return this.consumer.subscriptions.reload();
+	      if (!this.isProtocolSupported()) {
+	        ActionCable.log("Protocol is unsupported. Stopping monitor and disconnecting.");
+	        return this.close({
+	          allowReconnect: false
+	        });
+	      }
 	    },
-	    close: function() {
-	      return this.disconnect();
+	    close: function(event) {
+	      ActionCable.log("WebSocket onclose event");
+	      if (this.disconnected) {
+	        return;
+	      }
+	      this.disconnected = true;
+	      this.monitor.recordDisconnect();
+	      return this.subscriptions.notifyAll("disconnected", {
+	        willAttemptReconnect: this.monitor.isRunning()
+	      });
 	    },
 	    error: function() {
-	      return this.disconnect();
+	      return ActionCable.log("WebSocket onerror event");
 	    }
-	  };
-
-	  Connection.prototype.disconnect = function() {
-	    if (this.disconnected) {
-	      return;
-	    }
-	    this.disconnected = true;
-	    return this.consumer.subscriptions.notifyAll('disconnected');
-	  };
-
-	  Connection.prototype.toJSON = function() {
-	    return {
-	      state: this.getState()
-	    };
 	  };
 
 	  return Connection;
@@ -264,194 +328,45 @@
 
 /***/ },
 /* 4 */
-/***/ function(module, exports) {
-
-	module.exports = {
-	  message_types: {
-	    welcome: 'welcome',
-	    ping: 'ping',
-	    confirmation: 'confirm_subscription',
-	    rejection: 'reject_subscription'
-	  }
-	};
-
-
-/***/ },
-/* 5 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var ConnectionMonitor, INTERNAL,
-	  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
-
-	INTERNAL = __webpack_require__(4);
-
-	ConnectionMonitor = (function() {
-	  var clamp, now, secondsSince;
-
-	  ConnectionMonitor.pollInterval = {
-	    min: 3,
-	    max: 30
-	  };
-
-	  ConnectionMonitor.staleThreshold = 6;
-
-	  function ConnectionMonitor(consumer) {
-	    this.consumer = consumer;
-	    this.visibilityDidChange = bind(this.visibilityDidChange, this);
-	    this.start();
-	  }
-
-	  ConnectionMonitor.prototype.connected = function() {
-	    this.reset();
-	    this.pingedAt = now();
-	    return delete this.disconnectedAt;
-	  };
-
-	  ConnectionMonitor.prototype.disconnected = function() {
-	    return this.disconnectedAt = now();
-	  };
-
-	  ConnectionMonitor.prototype.ping = function() {
-	    return this.pingedAt = now();
-	  };
-
-	  ConnectionMonitor.prototype.reset = function() {
-	    this.reconnectAttempts = 0;
-	    return this.consumer.connection.isOpen();
-	  };
-
-	  ConnectionMonitor.prototype.start = function() {
-	    this.reset();
-	    delete this.stoppedAt;
-	    this.startedAt = now();
-	    this.poll();
-	    return console.log('subscribe');
-	  };
-
-	  ConnectionMonitor.prototype.stop = function() {
-	    this.stoppedAt = now();
-	    return console.log('un-subscribe');
-	  };
-
-	  ConnectionMonitor.prototype.poll = function() {
-	    return setTimeout((function(_this) {
-	      return function() {
-	        if (!_this.stoppedAt) {
-	          _this.reconnectIfStale();
-	          return _this.poll();
-	        }
-	      };
-	    })(this), this.getInterval());
-	  };
-
-	  ConnectionMonitor.prototype.getInterval = function() {
-	    var interval, max, min, ref;
-	    ref = this.constructor.pollInterval, min = ref.min, max = ref.max;
-	    interval = 5 * Math.log(this.reconnectAttempts + 1);
-	    return clamp(interval, min, max) * 1000;
-	  };
-
-	  ConnectionMonitor.prototype.reconnectIfStale = function() {
-	    if (this.connectionIsStale()) {
-	      this.reconnectAttempts++;
-	      if (!this.disconnectedRecently()) {
-	        return this.consumer.connection.reopen();
-	      }
-	    }
-	  };
-
-	  ConnectionMonitor.prototype.connectionIsStale = function() {
-	    var ref;
-	    return secondsSince((ref = this.pingedAt) != null ? ref : this.startedAt) > this.constructor.staleThreshold;
-	  };
-
-	  ConnectionMonitor.prototype.disconnectedRecently = function() {
-	    return this.disconnectedAt && secondsSince(this.disconnectedAt) < this.constructor.staleThreshold;
-	  };
-
-	  ConnectionMonitor.prototype.visibilityDidChange = function() {
-	    if (this.appComponent.visibilityState === 'visible') {
-	      return setTimeout((function(_this) {
-	        return function() {
-	          if (_this.connectionIsStale() || !_this.consumer.connection.isOpen()) {
-	            return _this.consumer.connection.reopen();
-	          }
-	        };
-	      })(this), 200);
-	    }
-	  };
-
-	  ConnectionMonitor.prototype.toJSON = function() {
-	    var connectionIsStale, interval;
-	    interval = this.getInterval();
-	    connectionIsStale = this.connectionIsStale();
-	    return {
-	      startedAt: this.startedAt,
-	      stoppedAt: this.stoppedAt,
-	      pingedAt: this.pingedAt,
-	      reconnectAttempts: this.reconnectAttempts,
-	      connectionIsStale: connectionIsStale,
-	      interval: interval
-	    };
-	  };
-
-	  now = function() {
-	    return new Date().getTime();
-	  };
-
-	  secondsSince = function(time) {
-	    return (now() - time) / 1000;
-	  };
-
-	  clamp = function(number, min, max) {
-	    return Math.max(min, Math.min(max, number));
-	  };
-
-	  return ConnectionMonitor;
-
-	})();
-
-	module.exports = ConnectionMonitor;
-
-
-/***/ },
-/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var INTERNAL, Subscription, Subscriptions,
 	  slice = [].slice;
 
-	INTERNAL = __webpack_require__(4);
+	INTERNAL = __webpack_require__(5);
 
-	Subscription = __webpack_require__(7);
+	Subscription = __webpack_require__(6);
 
 	Subscriptions = (function() {
 	  function Subscriptions(consumer) {
 	    this.consumer = consumer;
 	    this.subscriptions = [];
-	    this.history = [];
 	  }
 
-	  Subscriptions.prototype.create = function(channelName, actions) {
-	    var channel, params;
+	  Subscriptions.prototype.create = function(channelName, mixin) {
+	    var channel, params, subscription;
 	    channel = channelName;
 	    params = typeof channel === 'object' ? channel : {
 	      channel: channel
 	    };
-	    return new Subscription(this, params, actions);
+	    subscription = new Subscription(this.consumer, params, mixin);
+	    return this.add(subscription);
 	  };
 
 	  Subscriptions.prototype.add = function(subscription) {
 	    this.subscriptions.push(subscription);
-	    this.notify(subscription, 'initialized');
-	    return this.sendCommand(subscription, 'subscribe');
+	    this.consumer.ensureActiveConnection();
+	    this.notify(subscription, "initialized");
+	    this.sendCommand(subscription, "subscribe");
+	    return subscription;
 	  };
 
 	  Subscriptions.prototype.remove = function(subscription) {
 	    this.forget(subscription);
 	    if (!this.findAll(subscription.identifier).length) {
-	      return this.sendCommand(subscription, 'unsubscribe');
+	      this.sendCommand(subscription, "unsubscribe");
 	    }
+	    return subscription;
 	  };
 
 	  Subscriptions.prototype.reject = function(identifier) {
@@ -461,14 +376,15 @@
 	    for (i = 0, len = ref.length; i < len; i++) {
 	      subscription = ref[i];
 	      this.forget(subscription);
-	      results.push(this.notify(subscription, 'rejected'));
+	      this.notify(subscription, "rejected");
+	      results.push(subscription);
 	    }
 	    return results;
 	  };
 
 	  Subscriptions.prototype.forget = function(subscription) {
 	    var s;
-	    return this.subscriptions = (function() {
+	    this.subscriptions = (function() {
 	      var i, len, ref, results;
 	      ref = this.subscriptions;
 	      results = [];
@@ -480,6 +396,7 @@
 	      }
 	      return results;
 	    }).call(this);
+	    return subscription;
 	  };
 
 	  Subscriptions.prototype.findAll = function(identifier) {
@@ -501,7 +418,7 @@
 	    results = [];
 	    for (i = 0, len = ref.length; i < len; i++) {
 	      subscription = ref[i];
-	      results.push(this.sendCommand(subscription, 'subscribe'));
+	      results.push(this.sendCommand(subscription, "subscribe"));
 	    }
 	    return results;
 	  };
@@ -519,9 +436,9 @@
 	  };
 
 	  Subscriptions.prototype.notify = function() {
-	    var args, callbackName, i, identifier, len, results, subscription, subscriptions;
+	    var args, callbackName, i, len, results, subscription, subscriptions;
 	    subscription = arguments[0], callbackName = arguments[1], args = 3 <= arguments.length ? slice.call(arguments, 2) : [];
-	    if (typeof subscription === 'string') {
+	    if (typeof subscription === "string") {
 	      subscriptions = this.findAll(subscription);
 	    } else {
 	      subscriptions = [subscription];
@@ -529,21 +446,7 @@
 	    results = [];
 	    for (i = 0, len = subscriptions.length; i < len; i++) {
 	      subscription = subscriptions[i];
-	      if (typeof subscription[callbackName] === "function") {
-	        subscription[callbackName].apply(subscription, args);
-	      }
-	      if (callbackName === 'initialized' || callbackName === 'connected' || callbackName === 'disconnected' || callbackName === 'rejected') {
-	        identifier = subscription.identifier;
-	        results.push(this.record({
-	          notification: {
-	            identifier: identifier,
-	            callbackName: callbackName,
-	            args: args
-	          }
-	        }));
-	      } else {
-	        results.push(void 0);
-	      }
+	      results.push(typeof subscription[callbackName] === "function" ? subscription[callbackName].apply(subscription, args) : void 0);
 	    }
 	    return results;
 	  };
@@ -557,29 +460,6 @@
 	    });
 	  };
 
-	  Subscriptions.prototype.record = function(data) {
-	    data.time = new Date();
-	    this.history = this.history.slice(-19);
-	    return this.history.push(data);
-	  };
-
-	  Subscriptions.prototype.toJSON = function() {
-	    var subscription;
-	    return {
-	      history: this.history,
-	      identifiers: (function() {
-	        var i, len, ref, results;
-	        ref = this.subscriptions;
-	        results = [];
-	        for (i = 0, len = ref.length; i < len; i++) {
-	          subscription = ref[i];
-	          results.push(subscription.identifier);
-	        }
-	        return results;
-	      }).call(this)
-	    };
-	  };
-
 	  return Subscriptions;
 
 	})();
@@ -588,28 +468,37 @@
 
 
 /***/ },
-/* 7 */
-/***/ function(module, exports, __webpack_require__) {
+/* 5 */
+/***/ function(module, exports) {
 
-	var EventEmitter, Subscription,
-	  extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-	  hasProp = {}.hasOwnProperty,
-	  indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+	module.exports = {
+	  message_types: {
+	    welcome: 'welcome',
+	    ping: 'ping',
+	    confirmation: 'confirm_subscription',
+	    rejection: 'reject_subscription'
+	  },
+	  default_mount_path: '/cable',
+	  protocols: ['actioncable-v1-json', 'actioncable-unsupported']
+	};
 
-	EventEmitter = __webpack_require__(8);
 
-	Subscription = (function(superClass) {
-	  extend(Subscription, superClass);
+/***/ },
+/* 6 */
+/***/ function(module, exports) {
 
-	  function Subscription(subscriptions, params, actions) {
-	    this.subscriptions = subscriptions;
+	var Subscription;
+
+	Subscription = (function() {
+	  var extend;
+
+	  function Subscription(consumer, params, mixin) {
+	    this.consumer = consumer;
 	    if (params == null) {
 	      params = {};
 	    }
-	    this.actions = actions != null ? actions : [];
 	    this.identifier = JSON.stringify(params);
-	    this.subscriptions.add(this);
-	    this.consumer = this.subscriptions.consumer;
+	    extend(this, mixin);
 	  }
 
 	  Subscription.prototype.perform = function(action, data) {
@@ -629,307 +518,29 @@
 	  };
 
 	  Subscription.prototype.unsubscribe = function() {
-	    return this.subscriptions.remove(this);
+	    return this.consumer.subscriptions.remove(this);
 	  };
 
-	  Subscription.prototype.connected = function() {
-	    return this.emit('connected');
-	  };
-
-	  Subscription.prototype.disconnected = function() {
-	    return this.emit('disconnected');
-	  };
-
-	  Subscription.prototype.rejected = function() {
-	    return this.emit('rejected');
-	  };
-
-	  Subscription.prototype.received = function(data) {
-	    var ref;
-	    if (ref = data.action, indexOf.call(this.actions, ref) >= 0) {
-	      return this.emit(data.action, data);
-	    } else {
-	      return this.emit('received', data);
+	  extend = function(object, properties) {
+	    var key, value;
+	    if (properties != null) {
+	      for (key in properties) {
+	        value = properties[key];
+	        object[key] = value;
+	      }
 	    }
+	    return object;
 	  };
 
 	  return Subscription;
 
-	})(EventEmitter);
+	})();
 
 	module.exports = Subscription;
 
 
 /***/ },
-/* 8 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	//
-	// We store our EE objects in a plain object whose properties are event names.
-	// If `Object.create(null)` is not supported we prefix the event names with a
-	// `~` to make sure that the built-in object properties are not overridden or
-	// used as an attack vector.
-	// We also assume that `Object.create(null)` is available when the event name
-	// is an ES6 Symbol.
-	//
-	var prefix = typeof Object.create !== 'function' ? '~' : false;
-
-	/**
-	 * Representation of a single EventEmitter function.
-	 *
-	 * @param {Function} fn Event handler to be called.
-	 * @param {Mixed} context Context for function execution.
-	 * @param {Boolean} once Only emit once
-	 * @api private
-	 */
-	function EE(fn, context, once) {
-	  this.fn = fn;
-	  this.context = context;
-	  this.once = once || false;
-	}
-
-	/**
-	 * Minimal EventEmitter interface that is molded against the Node.js
-	 * EventEmitter interface.
-	 *
-	 * @constructor
-	 * @api public
-	 */
-	function EventEmitter() { /* Nothing to set */ }
-
-	/**
-	 * Holds the assigned EventEmitters by name.
-	 *
-	 * @type {Object}
-	 * @private
-	 */
-	EventEmitter.prototype._events = undefined;
-
-	/**
-	 * Return a list of assigned event listeners.
-	 *
-	 * @param {String} event The events that should be listed.
-	 * @param {Boolean} exists We only need to know if there are listeners.
-	 * @returns {Array|Boolean}
-	 * @api public
-	 */
-	EventEmitter.prototype.listeners = function listeners(event, exists) {
-	  var evt = prefix ? prefix + event : event
-	    , available = this._events && this._events[evt];
-
-	  if (exists) return !!available;
-	  if (!available) return [];
-	  if (available.fn) return [available.fn];
-
-	  for (var i = 0, l = available.length, ee = new Array(l); i < l; i++) {
-	    ee[i] = available[i].fn;
-	  }
-
-	  return ee;
-	};
-
-	/**
-	 * Emit an event to all registered event listeners.
-	 *
-	 * @param {String} event The name of the event.
-	 * @returns {Boolean} Indication if we've emitted an event.
-	 * @api public
-	 */
-	EventEmitter.prototype.emit = function emit(event, a1, a2, a3, a4, a5) {
-	  var evt = prefix ? prefix + event : event;
-
-	  if (!this._events || !this._events[evt]) return false;
-
-	  var listeners = this._events[evt]
-	    , len = arguments.length
-	    , args
-	    , i;
-
-	  if ('function' === typeof listeners.fn) {
-	    if (listeners.once) this.removeListener(event, listeners.fn, undefined, true);
-
-	    switch (len) {
-	      case 1: return listeners.fn.call(listeners.context), true;
-	      case 2: return listeners.fn.call(listeners.context, a1), true;
-	      case 3: return listeners.fn.call(listeners.context, a1, a2), true;
-	      case 4: return listeners.fn.call(listeners.context, a1, a2, a3), true;
-	      case 5: return listeners.fn.call(listeners.context, a1, a2, a3, a4), true;
-	      case 6: return listeners.fn.call(listeners.context, a1, a2, a3, a4, a5), true;
-	    }
-
-	    for (i = 1, args = new Array(len -1); i < len; i++) {
-	      args[i - 1] = arguments[i];
-	    }
-
-	    listeners.fn.apply(listeners.context, args);
-	  } else {
-	    var length = listeners.length
-	      , j;
-
-	    for (i = 0; i < length; i++) {
-	      if (listeners[i].once) this.removeListener(event, listeners[i].fn, undefined, true);
-
-	      switch (len) {
-	        case 1: listeners[i].fn.call(listeners[i].context); break;
-	        case 2: listeners[i].fn.call(listeners[i].context, a1); break;
-	        case 3: listeners[i].fn.call(listeners[i].context, a1, a2); break;
-	        default:
-	          if (!args) for (j = 1, args = new Array(len -1); j < len; j++) {
-	            args[j - 1] = arguments[j];
-	          }
-
-	          listeners[i].fn.apply(listeners[i].context, args);
-	      }
-	    }
-	  }
-
-	  return true;
-	};
-
-	/**
-	 * Register a new EventListener for the given event.
-	 *
-	 * @param {String} event Name of the event.
-	 * @param {Functon} fn Callback function.
-	 * @param {Mixed} context The context of the function.
-	 * @api public
-	 */
-	EventEmitter.prototype.on = function on(event, fn, context) {
-	  var listener = new EE(fn, context || this)
-	    , evt = prefix ? prefix + event : event;
-
-	  if (!this._events) this._events = prefix ? {} : Object.create(null);
-	  if (!this._events[evt]) this._events[evt] = listener;
-	  else {
-	    if (!this._events[evt].fn) this._events[evt].push(listener);
-	    else this._events[evt] = [
-	      this._events[evt], listener
-	    ];
-	  }
-
-	  return this;
-	};
-
-	/**
-	 * Add an EventListener that's only called once.
-	 *
-	 * @param {String} event Name of the event.
-	 * @param {Function} fn Callback function.
-	 * @param {Mixed} context The context of the function.
-	 * @api public
-	 */
-	EventEmitter.prototype.once = function once(event, fn, context) {
-	  var listener = new EE(fn, context || this, true)
-	    , evt = prefix ? prefix + event : event;
-
-	  if (!this._events) this._events = prefix ? {} : Object.create(null);
-	  if (!this._events[evt]) this._events[evt] = listener;
-	  else {
-	    if (!this._events[evt].fn) this._events[evt].push(listener);
-	    else this._events[evt] = [
-	      this._events[evt], listener
-	    ];
-	  }
-
-	  return this;
-	};
-
-	/**
-	 * Remove event listeners.
-	 *
-	 * @param {String} event The event we want to remove.
-	 * @param {Function} fn The listener that we need to find.
-	 * @param {Mixed} context Only remove listeners matching this context.
-	 * @param {Boolean} once Only remove once listeners.
-	 * @api public
-	 */
-	EventEmitter.prototype.removeListener = function removeListener(event, fn, context, once) {
-	  var evt = prefix ? prefix + event : event;
-
-	  if (!this._events || !this._events[evt]) return this;
-
-	  var listeners = this._events[evt]
-	    , events = [];
-
-	  if (fn) {
-	    if (listeners.fn) {
-	      if (
-	           listeners.fn !== fn
-	        || (once && !listeners.once)
-	        || (context && listeners.context !== context)
-	      ) {
-	        events.push(listeners);
-	      }
-	    } else {
-	      for (var i = 0, length = listeners.length; i < length; i++) {
-	        if (
-	             listeners[i].fn !== fn
-	          || (once && !listeners[i].once)
-	          || (context && listeners[i].context !== context)
-	        ) {
-	          events.push(listeners[i]);
-	        }
-	      }
-	    }
-	  }
-
-	  //
-	  // Reset the array, or remove it completely if we have no more listeners.
-	  //
-	  if (events.length) {
-	    this._events[evt] = events.length === 1 ? events[0] : events;
-	  } else {
-	    delete this._events[evt];
-	  }
-
-	  return this;
-	};
-
-	/**
-	 * Remove all listeners or only the listeners for the specified event.
-	 *
-	 * @param {String} event The event want to remove all listeners for.
-	 * @api public
-	 */
-	EventEmitter.prototype.removeAllListeners = function removeAllListeners(event) {
-	  if (!this._events) return this;
-
-	  if (event) delete this._events[prefix ? prefix + event : event];
-	  else this._events = prefix ? {} : Object.create(null);
-
-	  return this;
-	};
-
-	//
-	// Alias methods names because people roll like that.
-	//
-	EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
-	EventEmitter.prototype.addListener = EventEmitter.prototype.on;
-
-	//
-	// This function doesn't apply anymore.
-	//
-	EventEmitter.prototype.setMaxListeners = function setMaxListeners() {
-	  return this;
-	};
-
-	//
-	// Expose the prefix.
-	//
-	EventEmitter.prefixed = prefix;
-
-	//
-	// Expose the module.
-	//
-	if (true) {
-	  module.exports = EventEmitter;
-	}
-
-
-/***/ },
-/* 9 */
+/* 7 */
 /***/ function(module, exports) {
 
 	var Cable;
@@ -955,7 +566,7 @@
 
 
 /***/ },
-/* 10 */
+/* 8 */
 /***/ function(module, exports) {
 
 	var CableMixin;
@@ -994,12 +605,12 @@
 
 
 /***/ },
-/* 11 */
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var ChannelMixin, _capitalize;
 
-	_capitalize = __webpack_require__(12);
+	_capitalize = __webpack_require__(10);
 
 	ChannelMixin = function() {
 	  var channelNames;
@@ -1106,7 +717,7 @@
 
 
 /***/ },
-/* 12 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -1117,7 +728,7 @@
 	 * Copyright 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
 	 * Available under MIT license <https://lodash.com/license>
 	 */
-	var baseToString = __webpack_require__(13);
+	var baseToString = __webpack_require__(11);
 
 	/**
 	 * Capitalizes the first character of `string`.
@@ -1141,7 +752,7 @@
 
 
 /***/ },
-/* 13 */
+/* 11 */
 /***/ function(module, exports) {
 
 	/**
@@ -1169,7 +780,7 @@
 
 
 /***/ },
-/* 14 */
+/* 12 */
 /***/ function(module, exports) {
 
 	module.exports = '0.1.1'

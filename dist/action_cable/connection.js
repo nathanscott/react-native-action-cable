@@ -1,9 +1,13 @@
-var Connection, message_types,
-  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+var ActionCable, Connection, i, message_types, protocols, ref, supportedProtocols, unsupportedProtocol,
   slice = [].slice,
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-message_types = require('./internal').message_types;
+ActionCable = require('./action_cable');
+
+ref = require('./action_cable').INTERNAL, message_types = ref.message_types, protocols = ref.protocols;
+
+supportedProtocols = 2 <= protocols.length ? slice.call(protocols, 0, i = protocols.length - 1) : (i = 0, []), unsupportedProtocol = protocols[i++];
 
 Connection = (function() {
   Connection.reopenDelay = 500;
@@ -11,11 +15,12 @@ Connection = (function() {
   function Connection(consumer) {
     this.consumer = consumer;
     this.open = bind(this.open, this);
-    this.open();
+    this.subscriptions = this.consumer.subscriptions;
+    this.monitor = new ConnectionMonitor(this);
+    this.disconnected = true;
   }
 
   Connection.prototype.send = function(data) {
-    console.log("Connection: send " + data);
     if (this.isOpen()) {
       this.webSocket.send(JSON.stringify(data));
       return true;
@@ -25,50 +30,81 @@ Connection = (function() {
   };
 
   Connection.prototype.open = function() {
-    console.log("Connection: open");
-    if (this.webSocket && !this.isState('closed')) {
-      console.log("Connection: open 1");
-      throw new Error('Existing connection must be closed before opening');
+    if (this.isActive()) {
+      ActionCable.log("Attempted to open WebSocket, but existing socket is " + (this.getState()));
+      throw new Error("Existing connection must be closed before opening");
     } else {
-      console.log("Connection: open 2");
-      this.webSocket = new WebSocket(this.consumer.url);
+      ActionCable.log("Opening WebSocket, current state is " + (this.getState()) + ", subprotocols: " + protocols);
+      if (this.webSocket != null) {
+        this.uninstallEventHandlers();
+      }
+      this.webSocket = new ActionCable.WebSocket(this.consumer.url, protocols);
       this.installEventHandlers();
+      this.monitor.start();
       return true;
     }
   };
 
-  Connection.prototype.close = function() {
-    var ref;
-    return (ref = this.webSocket) != null ? ref.close() : void 0;
-  };
-
-  Connection.prototype.reopen = function() {
-    if (this.isState('closed')) {
-      return this.open();
-    } else {
-      try {
-        return this.close();
-      } finally {
-        setTimeout(this.open, this.constructor.reopenDelay);
-      }
+  Connection.prototype.close = function(arg) {
+    var allowReconnect, ref1;
+    allowReconnect = (arg != null ? arg : {
+      allowReconnect: true
+    }).allowReconnect;
+    if (!allowReconnect) {
+      this.monitor.stop();
+    }
+    if (this.isActive()) {
+      return (ref1 = this.webSocket) != null ? ref1.close() : void 0;
     }
   };
 
+  Connection.prototype.reopen = function() {
+    var error, error1;
+    ActionCable.log("Reopening WebSocket, current state is " + (this.getState()));
+    if (this.isActive()) {
+      try {
+        return this.close();
+      } catch (error1) {
+        error = error1;
+        return ActionCable.log("Failed to reopen WebSocket", error);
+      } finally {
+        ActionCable.log("Reopening WebSocket in " + this.constructor.reopenDelay + "ms");
+        setTimeout(this.open, this.constructor.reopenDelay);
+      }
+    } else {
+      return this.open();
+    }
+  };
+
+  Connection.prototype.getProtocol = function() {
+    var ref1;
+    return (ref1 = this.webSocket) != null ? ref1.protocol : void 0;
+  };
+
   Connection.prototype.isOpen = function() {
-    return this.isState('open');
+    return this.isState("open");
+  };
+
+  Connection.prototype.isActive = function() {
+    return this.isState("open", "connecting");
+  };
+
+  Connection.prototype.isProtocolSupported = function() {
+    var ref1;
+    return ref1 = this.getProtocol(), indexOf.call(supportedProtocols, ref1) >= 0;
   };
 
   Connection.prototype.isState = function() {
-    var ref, states;
+    var ref1, states;
     states = 1 <= arguments.length ? slice.call(arguments, 0) : [];
-    return ref = this.getState(), indexOf.call(states, ref) >= 0;
+    return ref1 = this.getState(), indexOf.call(states, ref1) >= 0;
   };
 
   Connection.prototype.getState = function() {
-    var ref, state, value;
+    var ref1, state, value;
     for (state in WebSocket) {
       value = WebSocket[state];
-      if (value === ((ref = this.webSocket) != null ? ref.readyState : void 0)) {
+      if (value === ((ref1 = this.webSocket) != null ? ref1.readyState : void 0)) {
         return state.toLowerCase();
       }
     }
@@ -83,47 +119,58 @@ Connection = (function() {
     }
   };
 
+  Connection.prototype.uninstallEventHandlers = function() {
+    var eventName;
+    for (eventName in this.events) {
+      this.webSocket["on" + eventName] = function() {};
+    }
+  };
+
   Connection.prototype.events = {
     message: function(event) {
-      var identifier, message, ref, type;
-      ref = JSON.parse(event.data), identifier = ref.identifier, message = ref.message, type = ref.type;
+      var identifier, message, ref1, type;
+      if (!this.isProtocolSupported()) {
+        return;
+      }
+      ref1 = JSON.parse(event.data), identifier = ref1.identifier, message = ref1.message, type = ref1.type;
       switch (type) {
-        case message_types.confirmation:
-          return this.consumer.subscriptions.notify(identifier, 'connected');
-        case message_types.rejection:
-          return this.consumer.subscriptions.reject(identifier);
         case message_types.welcome:
-          return this.consumer.connectionMonitor.connected();
+          this.monitor.recordConnect();
+          return this.subscriptions.reload();
         case message_types.ping:
-          return this.consumer.connectionMonitor.ping();
+          return this.monitor.recordPing();
+        case message_types.confirmation:
+          return this.subscriptions.notify(identifier, "connected");
+        case message_types.rejection:
+          return this.subscriptions.reject(identifier);
         default:
-          return this.consumer.subscriptions.notify(identifier, 'received', message);
+          return this.subscriptions.notify(identifier, "received", message);
       }
     },
     open: function() {
+      ActionCable.log("WebSocket onopen event, using '" + (this.getProtocol()) + "' subprotocol");
       this.disconnected = false;
-      return this.consumer.subscriptions.reload();
+      if (!this.isProtocolSupported()) {
+        ActionCable.log("Protocol is unsupported. Stopping monitor and disconnecting.");
+        return this.close({
+          allowReconnect: false
+        });
+      }
     },
-    close: function() {
-      return this.disconnect();
+    close: function(event) {
+      ActionCable.log("WebSocket onclose event");
+      if (this.disconnected) {
+        return;
+      }
+      this.disconnected = true;
+      this.monitor.recordDisconnect();
+      return this.subscriptions.notifyAll("disconnected", {
+        willAttemptReconnect: this.monitor.isRunning()
+      });
     },
     error: function() {
-      return this.disconnect();
+      return ActionCable.log("WebSocket onerror event");
     }
-  };
-
-  Connection.prototype.disconnect = function() {
-    if (this.disconnected) {
-      return;
-    }
-    this.disconnected = true;
-    return this.consumer.subscriptions.notifyAll('disconnected');
-  };
-
-  Connection.prototype.toJSON = function() {
-    return {
-      state: this.getState()
-    };
   };
 
   return Connection;
