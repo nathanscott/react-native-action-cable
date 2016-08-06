@@ -1,5 +1,5 @@
 ActionCable = require('./action_cable')
-{message_types, protocols} = require('./action_cable').INTERNAL
+{message_types, protocols} = ActionCable.INTERNAL
 [supportedProtocols..., unsupportedProtocol] = protocols
 
 class Connection

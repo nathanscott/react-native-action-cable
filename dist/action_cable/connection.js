@@ -5,7 +5,7 @@ var ActionCable, Connection, i, message_types, protocols, ref, supportedProtocol
 
 ActionCable = require('./action_cable');
 
-ref = require('./action_cable').INTERNAL, message_types = ref.message_types, protocols = ref.protocols;
+ref = ActionCable.INTERNAL, message_types = ref.message_types, protocols = ref.protocols;
 
 supportedProtocols = 2 <= protocols.length ? slice.call(protocols, 0, i = protocols.length - 1) : (i = 0, []), unsupportedProtocol = protocols[i++];
 

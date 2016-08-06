@@ -1,7 +1,13 @@
-var Subscription;
+var EventEmitter, Subscription,
+  extend1 = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  hasProp = {}.hasOwnProperty;
 
-Subscription = (function() {
+EventEmitter = require('eventemitter3');
+
+Subscription = (function(superClass) {
   var extend;
+
+  extend1(Subscription, superClass);
 
   function Subscription(consumer, params, mixin) {
     this.consumer = consumer;
@@ -43,8 +49,25 @@ Subscription = (function() {
     return object;
   };
 
+  Subscription.prototype.connected = function() {
+    return this.emit('connected');
+  };
+
+  Subscription.prototype.disconnected = function() {
+    return this.emit('disconnected');
+  };
+
+  Subscription.prototype.rejected = function() {
+    return this.emit('rejected');
+  };
+
+  Subscription.prototype.received = function(data) {
+    data.action = data.action != null ? data.action : 'received';
+    return this.emit(data.action, data);
+  };
+
   return Subscription;
 
-})();
+})(EventEmitter);
 
 module.exports = Subscription;
