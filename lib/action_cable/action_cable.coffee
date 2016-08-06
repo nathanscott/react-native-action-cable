@@ -6,7 +6,7 @@ ActionCable =
   logger: window.console
 
   createConsumer: (url) ->
-    new Consumer(@createWebSocketURL(url))
+    new Consumer(@createWebSocketURL(url), @log, @WebSocket)
 
   createWebSocketURL: (url) ->
     if url and not /^wss?:/i.test(url)

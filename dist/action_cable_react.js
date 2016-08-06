@@ -63,11 +63,11 @@
 	Consumer = __webpack_require__(2);
 
 	ActionCable = {
-	  INTERNAL: __webpack_require__(5),
+	  INTERNAL: __webpack_require__(4),
 	  WebSocket: window.WebSocket,
 	  logger: window.console,
 	  createConsumer: function(url) {
-	    return new Consumer(this.createWebSocketURL(url));
+	    return new Consumer(this.createWebSocketURL(url), this.log, this.WebSocket);
 	  },
 	  createWebSocketURL: function(url) {
 	    if (url && !/^wss?:/i.test(url)) {
@@ -102,15 +102,17 @@
 
 	Connection = __webpack_require__(3);
 
-	Subscriptions = __webpack_require__(4);
+	Subscriptions = __webpack_require__(5);
 
 	Subscription = __webpack_require__(6);
 
 	Consumer = (function() {
-	  function Consumer(url) {
+	  function Consumer(url, log, WebSocket) {
 	    this.url = url;
+	    this.log = log;
+	    this.WebSocket = WebSocket;
 	    this.subscriptions = new Subscriptions(this);
-	    this.connection = new Connection(this);
+	    this.connection = new Connection(this, this.log, this.WebSocket);
 	  }
 
 	  Consumer.prototype.send = function(data) {
@@ -144,25 +146,25 @@
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var ActionCable, Connection, i, message_types, protocols, ref, supportedProtocols, unsupportedProtocol,
+	var Connection, i, message_types, protocols, ref, supportedProtocols, unsupportedProtocol,
 	  slice = [].slice,
 	  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
 	  indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-	ActionCable = __webpack_require__(1);
-
-	ref = ActionCable.INTERNAL, message_types = ref.message_types, protocols = ref.protocols;
+	ref = __webpack_require__(4), message_types = ref.message_types, protocols = ref.protocols;
 
 	supportedProtocols = 2 <= protocols.length ? slice.call(protocols, 0, i = protocols.length - 1) : (i = 0, []), unsupportedProtocol = protocols[i++];
 
 	Connection = (function() {
 	  Connection.reopenDelay = 500;
 
-	  function Connection(consumer) {
+	  function Connection(consumer, log, WebSocket1) {
 	    this.consumer = consumer;
+	    this.log = log;
+	    this.WebSocket = WebSocket1;
 	    this.open = bind(this.open, this);
 	    this.subscriptions = this.consumer.subscriptions;
-	    this.monitor = new ConnectionMonitor(this);
+	    this.monitor = new ConnectionMonitor(this, this.log);
 	    this.disconnected = true;
 	  }
 
@@ -177,14 +179,14 @@
 
 	  Connection.prototype.open = function() {
 	    if (this.isActive()) {
-	      ActionCable.log("Attempted to open WebSocket, but existing socket is " + (this.getState()));
+	      this.log("Attempted to open WebSocket, but existing socket is " + (this.getState()));
 	      throw new Error("Existing connection must be closed before opening");
 	    } else {
-	      ActionCable.log("Opening WebSocket, current state is " + (this.getState()) + ", subprotocols: " + protocols);
+	      this.log("Opening WebSocket, current state is " + (this.getState()) + ", subprotocols: " + protocols);
 	      if (this.webSocket != null) {
 	        this.uninstallEventHandlers();
 	      }
-	      this.webSocket = new ActionCable.WebSocket(this.consumer.url, protocols);
+	      this.webSocket = new this.WebSocket(this.consumer.url, protocols);
 	      this.installEventHandlers();
 	      this.monitor.start();
 	      return true;
@@ -206,15 +208,15 @@
 
 	  Connection.prototype.reopen = function() {
 	    var error, error1;
-	    ActionCable.log("Reopening WebSocket, current state is " + (this.getState()));
+	    this.log("Reopening WebSocket, current state is " + (this.getState()));
 	    if (this.isActive()) {
 	      try {
 	        return this.close();
 	      } catch (error1) {
 	        error = error1;
-	        return ActionCable.log("Failed to reopen WebSocket", error);
+	        return this.log("Failed to reopen WebSocket", error);
 	      } finally {
-	        ActionCable.log("Reopening WebSocket in " + this.constructor.reopenDelay + "ms");
+	        this.log("Reopening WebSocket in " + this.constructor.reopenDelay + "ms");
 	        setTimeout(this.open, this.constructor.reopenDelay);
 	      }
 	    } else {
@@ -294,17 +296,17 @@
 	      }
 	    },
 	    open: function() {
-	      ActionCable.log("WebSocket onopen event, using '" + (this.getProtocol()) + "' subprotocol");
+	      this.log("WebSocket onopen event, using '" + (this.getProtocol()) + "' subprotocol");
 	      this.disconnected = false;
 	      if (!this.isProtocolSupported()) {
-	        ActionCable.log("Protocol is unsupported. Stopping monitor and disconnecting.");
+	        this.log("Protocol is unsupported. Stopping monitor and disconnecting.");
 	        return this.close({
 	          allowReconnect: false
 	        });
 	      }
 	    },
 	    close: function(event) {
-	      ActionCable.log("WebSocket onclose event");
+	      this.log("WebSocket onclose event");
 	      if (this.disconnected) {
 	        return;
 	      }
@@ -315,7 +317,7 @@
 	      });
 	    },
 	    error: function() {
-	      return ActionCable.log("WebSocket onerror event");
+	      return this.log("WebSocket onerror event");
 	    }
 	  };
 
@@ -328,12 +330,28 @@
 
 /***/ },
 /* 4 */
+/***/ function(module, exports) {
+
+	module.exports = {
+	  message_types: {
+	    welcome: 'welcome',
+	    ping: 'ping',
+	    confirmation: 'confirm_subscription',
+	    rejection: 'reject_subscription'
+	  },
+	  default_mount_path: '/cable',
+	  protocols: ['actioncable-v1-json', 'actioncable-unsupported']
+	};
+
+
+/***/ },
+/* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var INTERNAL, Subscription, Subscriptions,
 	  slice = [].slice;
 
-	INTERNAL = __webpack_require__(5);
+	INTERNAL = __webpack_require__(4);
 
 	Subscription = __webpack_require__(6);
 
@@ -465,22 +483,6 @@
 	})();
 
 	module.exports = Subscriptions;
-
-
-/***/ },
-/* 5 */
-/***/ function(module, exports) {
-
-	module.exports = {
-	  message_types: {
-	    welcome: 'welcome',
-	    ping: 'ping',
-	    confirmation: 'confirm_subscription',
-	    rejection: 'reject_subscription'
-	  },
-	  default_mount_path: '/cable',
-	  protocols: ['actioncable-v1-json', 'actioncable-unsupported']
-	};
 
 
 /***/ },

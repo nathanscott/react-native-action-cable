@@ -1,22 +1,22 @@
-var ActionCable, Connection, i, message_types, protocols, ref, supportedProtocols, unsupportedProtocol,
+var Connection, i, message_types, protocols, ref, supportedProtocols, unsupportedProtocol,
   slice = [].slice,
   bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-ActionCable = require('./action_cable');
-
-ref = ActionCable.INTERNAL, message_types = ref.message_types, protocols = ref.protocols;
+ref = require('./internal'), message_types = ref.message_types, protocols = ref.protocols;
 
 supportedProtocols = 2 <= protocols.length ? slice.call(protocols, 0, i = protocols.length - 1) : (i = 0, []), unsupportedProtocol = protocols[i++];
 
 Connection = (function() {
   Connection.reopenDelay = 500;
 
-  function Connection(consumer) {
+  function Connection(consumer, log, WebSocket1) {
     this.consumer = consumer;
+    this.log = log;
+    this.WebSocket = WebSocket1;
     this.open = bind(this.open, this);
     this.subscriptions = this.consumer.subscriptions;
-    this.monitor = new ConnectionMonitor(this);
+    this.monitor = new ConnectionMonitor(this, this.log);
     this.disconnected = true;
   }
 
@@ -31,14 +31,14 @@ Connection = (function() {
 
   Connection.prototype.open = function() {
     if (this.isActive()) {
-      ActionCable.log("Attempted to open WebSocket, but existing socket is " + (this.getState()));
+      this.log("Attempted to open WebSocket, but existing socket is " + (this.getState()));
       throw new Error("Existing connection must be closed before opening");
     } else {
-      ActionCable.log("Opening WebSocket, current state is " + (this.getState()) + ", subprotocols: " + protocols);
+      this.log("Opening WebSocket, current state is " + (this.getState()) + ", subprotocols: " + protocols);
       if (this.webSocket != null) {
         this.uninstallEventHandlers();
       }
-      this.webSocket = new ActionCable.WebSocket(this.consumer.url, protocols);
+      this.webSocket = new this.WebSocket(this.consumer.url, protocols);
       this.installEventHandlers();
       this.monitor.start();
       return true;
@@ -60,15 +60,15 @@ Connection = (function() {
 
   Connection.prototype.reopen = function() {
     var error, error1;
-    ActionCable.log("Reopening WebSocket, current state is " + (this.getState()));
+    this.log("Reopening WebSocket, current state is " + (this.getState()));
     if (this.isActive()) {
       try {
         return this.close();
       } catch (error1) {
         error = error1;
-        return ActionCable.log("Failed to reopen WebSocket", error);
+        return this.log("Failed to reopen WebSocket", error);
       } finally {
-        ActionCable.log("Reopening WebSocket in " + this.constructor.reopenDelay + "ms");
+        this.log("Reopening WebSocket in " + this.constructor.reopenDelay + "ms");
         setTimeout(this.open, this.constructor.reopenDelay);
       }
     } else {
@@ -148,17 +148,17 @@ Connection = (function() {
       }
     },
     open: function() {
-      ActionCable.log("WebSocket onopen event, using '" + (this.getProtocol()) + "' subprotocol");
+      this.log("WebSocket onopen event, using '" + (this.getProtocol()) + "' subprotocol");
       this.disconnected = false;
       if (!this.isProtocolSupported()) {
-        ActionCable.log("Protocol is unsupported. Stopping monitor and disconnecting.");
+        this.log("Protocol is unsupported. Stopping monitor and disconnecting.");
         return this.close({
           allowReconnect: false
         });
       }
     },
     close: function(event) {
-      ActionCable.log("WebSocket onclose event");
+      this.log("WebSocket onclose event");
       if (this.disconnected) {
         return;
       }
@@ -169,7 +169,7 @@ Connection = (function() {
       });
     },
     error: function() {
-      return ActionCable.log("WebSocket onerror event");
+      return this.log("WebSocket onerror event");
     }
   };
 

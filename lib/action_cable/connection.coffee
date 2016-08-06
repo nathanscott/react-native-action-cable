@@ -1,13 +1,12 @@
-ActionCable = require('./action_cable')
-{message_types, protocols} = ActionCable.INTERNAL
+{message_types, protocols} = require('./internal')
 [supportedProtocols..., unsupportedProtocol] = protocols
 
 class Connection
   @reopenDelay: 500
 
-  constructor: (@consumer) ->
+  constructor: (@consumer, @log, @WebSocket) ->
     {@subscriptions} = @consumer
-    @monitor = new ConnectionMonitor this
+    @monitor = new ConnectionMonitor(@, @log)
     @disconnected = true
 
   send: (data) ->
@@ -19,12 +18,12 @@ class Connection
 
   open: =>
     if @isActive()
-      ActionCable.log("Attempted to open WebSocket, but existing socket is #{@getState()}")
+      @log("Attempted to open WebSocket, but existing socket is #{@getState()}")
       throw new Error("Existing connection must be closed before opening")
     else
-      ActionCable.log("Opening WebSocket, current state is #{@getState()}, subprotocols: #{protocols}")
+      @log("Opening WebSocket, current state is #{@getState()}, subprotocols: #{protocols}")
       @uninstallEventHandlers() if @webSocket?
-      @webSocket = new ActionCable.WebSocket(@consumer.url, protocols)
+      @webSocket = new @WebSocket(@consumer.url, protocols)
       @installEventHandlers()
       @monitor.start()
       true
@@ -34,14 +33,14 @@ class Connection
     @webSocket?.close() if @isActive()
 
   reopen: ->
-    ActionCable.log("Reopening WebSocket, current state is #{@getState()}")
+    @log("Reopening WebSocket, current state is #{@getState()}")
     if @isActive()
       try
         @close()
       catch error
-        ActionCable.log("Failed to reopen WebSocket", error)
+        @log("Failed to reopen WebSocket", error)
       finally
-        ActionCable.log("Reopening WebSocket in #{@constructor.reopenDelay}ms")
+        @log("Reopening WebSocket in #{@constructor.reopenDelay}ms")
         setTimeout(@open, @constructor.reopenDelay)
     else
       @open()
@@ -96,20 +95,20 @@ class Connection
           @subscriptions.notify(identifier, "received", message)
 
     open: ->
-      ActionCable.log("WebSocket onopen event, using '#{@getProtocol()}' subprotocol")
+      @log("WebSocket onopen event, using '#{@getProtocol()}' subprotocol")
       @disconnected = false
       if not @isProtocolSupported()
-        ActionCable.log("Protocol is unsupported. Stopping monitor and disconnecting.")
+        @log("Protocol is unsupported. Stopping monitor and disconnecting.")
         @close(allowReconnect: false)
 
     close: (event) ->
-      ActionCable.log("WebSocket onclose event")
+      @log("WebSocket onclose event")
       return if @disconnected
       @disconnected = true
       @monitor.recordDisconnect()
       @subscriptions.notifyAll("disconnected", {willAttemptReconnect: @monitor.isRunning()})
 
     error: ->
-      ActionCable.log("WebSocket onerror event")
+      @log("WebSocket onerror event")
 
 module.exports = Connection

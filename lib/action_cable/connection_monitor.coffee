@@ -1,5 +1,4 @@
 { AppState } = require('react-native')
-ActionCable = require('./action_cable')
 
 class ConnectionMonitor
   @pollInterval:
@@ -8,7 +7,7 @@ class ConnectionMonitor
 
   @staleThreshold: 6 # Server::Connections::BEAT_INTERVAL * 2 (missed two pings)
 
-  constructor: (@connection) ->
+  constructor: (@connection, @log) ->
     @reconnectAttempts = 0
 
   start: ->
@@ -17,14 +16,14 @@ class ConnectionMonitor
       delete @stoppedAt
       @startPolling()
       AppState.addEventListener("change", @visibilityDidChange)
-      ActionCable.log("ConnectionMonitor started. pollInterval = #{@getPollInterval()} ms")
+      @log("ConnectionMonitor started. pollInterval = #{@getPollInterval()} ms")
 
   stop: ->
     if @isRunning()
       @stoppedAt = now()
       @stopPolling()
       AppState.removeEventListener("change", @visibilityDidChange)
-      ActionCable.log("ConnectionMonitor stopped")
+      @log("ConnectionMonitor stopped")
 
   isRunning: ->
     @startedAt? and not @stoppedAt?
@@ -36,11 +35,11 @@ class ConnectionMonitor
     @reconnectAttempts = 0
     @recordPing()
     delete @disconnectedAt
-    ActionCable.log("ConnectionMonitor recorded connect")
+    @log("ConnectionMonitor recorded connect")
 
   recordDisconnect: ->
     @disconnectedAt = now()
-    ActionCable.log("ConnectionMonitor recorded disconnect")
+    @log("ConnectionMonitor recorded disconnect")
 
   # Private
 
@@ -64,12 +63,12 @@ class ConnectionMonitor
 
   reconnectIfStale: ->
     if @connectionIsStale()
-      ActionCable.log("ConnectionMonitor detected stale connection. reconnectAttempts = #{@reconnectAttempts}, pollInterval = #{@getPollInterval()} ms, time disconnected = #{secondsSince(@disconnectedAt)} s, stale threshold = #{@constructor.staleThreshold} s")
+      @log("ConnectionMonitor detected stale connection. reconnectAttempts = #{@reconnectAttempts}, pollInterval = #{@getPollInterval()} ms, time disconnected = #{secondsSince(@disconnectedAt)} s, stale threshold = #{@constructor.staleThreshold} s")
       @reconnectAttempts++
       if @disconnectedRecently()
-        ActionCable.log("ConnectionMonitor skipping reopening recent disconnect")
+        @log("ConnectionMonitor skipping reopening recent disconnect")
       else
-        ActionCable.log("ConnectionMonitor reopening")
+        @log("ConnectionMonitor reopening")
         @connection.reopen()
 
   connectionIsStale: ->
@@ -82,7 +81,7 @@ class ConnectionMonitor
     if AppState.currentState is "active"
       setTimeout =>
         if @connectionIsStale() or not @connection.isOpen()
-          ActionCable.log("ConnectionMonitor reopening stale connection on change. visbilityState = #{AppState.currentState}")
+          @log("ConnectionMonitor reopening stale connection on change. visbilityState = #{AppState.currentState}")
           @connection.reopen()
       , 200
 

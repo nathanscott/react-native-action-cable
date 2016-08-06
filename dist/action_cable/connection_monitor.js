@@ -1,9 +1,7 @@
-var ActionCable, AppState, ConnectionMonitor,
+var AppState, ConnectionMonitor,
   bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 AppState = require('react-native').AppState;
-
-ActionCable = require('./action_cable');
 
 ConnectionMonitor = (function() {
   var clamp, now, secondsSince;
@@ -15,8 +13,9 @@ ConnectionMonitor = (function() {
 
   ConnectionMonitor.staleThreshold = 6;
 
-  function ConnectionMonitor(connection) {
+  function ConnectionMonitor(connection, log) {
     this.connection = connection;
+    this.log = log;
     this.visibilityDidChange = bind(this.visibilityDidChange, this);
     this.reconnectAttempts = 0;
   }
@@ -27,7 +26,7 @@ ConnectionMonitor = (function() {
       delete this.stoppedAt;
       this.startPolling();
       AppState.addEventListener("change", this.visibilityDidChange);
-      return ActionCable.log("ConnectionMonitor started. pollInterval = " + (this.getPollInterval()) + " ms");
+      return this.log("ConnectionMonitor started. pollInterval = " + (this.getPollInterval()) + " ms");
     }
   };
 
@@ -36,7 +35,7 @@ ConnectionMonitor = (function() {
       this.stoppedAt = now();
       this.stopPolling();
       AppState.removeEventListener("change", this.visibilityDidChange);
-      return ActionCable.log("ConnectionMonitor stopped");
+      return this.log("ConnectionMonitor stopped");
     }
   };
 
@@ -52,12 +51,12 @@ ConnectionMonitor = (function() {
     this.reconnectAttempts = 0;
     this.recordPing();
     delete this.disconnectedAt;
-    return ActionCable.log("ConnectionMonitor recorded connect");
+    return this.log("ConnectionMonitor recorded connect");
   };
 
   ConnectionMonitor.prototype.recordDisconnect = function() {
     this.disconnectedAt = now();
-    return ActionCable.log("ConnectionMonitor recorded disconnect");
+    return this.log("ConnectionMonitor recorded disconnect");
   };
 
   ConnectionMonitor.prototype.startPolling = function() {
@@ -87,12 +86,12 @@ ConnectionMonitor = (function() {
 
   ConnectionMonitor.prototype.reconnectIfStale = function() {
     if (this.connectionIsStale()) {
-      ActionCable.log("ConnectionMonitor detected stale connection. reconnectAttempts = " + this.reconnectAttempts + ", pollInterval = " + (this.getPollInterval()) + " ms, time disconnected = " + (secondsSince(this.disconnectedAt)) + " s, stale threshold = " + this.constructor.staleThreshold + " s");
+      this.log("ConnectionMonitor detected stale connection. reconnectAttempts = " + this.reconnectAttempts + ", pollInterval = " + (this.getPollInterval()) + " ms, time disconnected = " + (secondsSince(this.disconnectedAt)) + " s, stale threshold = " + this.constructor.staleThreshold + " s");
       this.reconnectAttempts++;
       if (this.disconnectedRecently()) {
-        return ActionCable.log("ConnectionMonitor skipping reopening recent disconnect");
+        return this.log("ConnectionMonitor skipping reopening recent disconnect");
       } else {
-        ActionCable.log("ConnectionMonitor reopening");
+        this.log("ConnectionMonitor reopening");
         return this.connection.reopen();
       }
     }
@@ -112,7 +111,7 @@ ConnectionMonitor = (function() {
       return setTimeout((function(_this) {
         return function() {
           if (_this.connectionIsStale() || !_this.connection.isOpen()) {
-            ActionCable.log("ConnectionMonitor reopening stale connection on change. visbilityState = " + AppState.currentState);
+            _this.log("ConnectionMonitor reopening stale connection on change. visbilityState = " + AppState.currentState);
             return _this.connection.reopen();
           }
         };

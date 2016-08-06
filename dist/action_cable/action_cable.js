@@ -8,7 +8,7 @@ ActionCable = {
   WebSocket: window.WebSocket,
   logger: window.console,
   createConsumer: function(url) {
-    return new Consumer(this.createWebSocketURL(url));
+    return new Consumer(this.createWebSocketURL(url), this.log, this.WebSocket);
   },
   createWebSocketURL: function(url) {
     if (url && !/^wss?:/i.test(url)) {

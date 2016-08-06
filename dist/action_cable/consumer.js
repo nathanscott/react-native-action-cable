@@ -7,10 +7,12 @@ Subscriptions = require('./subscriptions');
 Subscription = require('./subscription');
 
 Consumer = (function() {
-  function Consumer(url) {
+  function Consumer(url, log, WebSocket) {
     this.url = url;
+    this.log = log;
+    this.WebSocket = WebSocket;
     this.subscriptions = new Subscriptions(this);
-    this.connection = new Connection(this);
+    this.connection = new Connection(this, this.log, this.WebSocket);
   }
 
   Consumer.prototype.send = function(data) {
