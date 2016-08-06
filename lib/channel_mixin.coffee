@@ -15,7 +15,7 @@ ChannelMixin = ->
           cable.channel(channel).on 'rejected', @handleDisconnected if @handleDisconnected?
           cable.channel(channel).on 'received', @handleReceived if @handleReceived?
 
-          for action in cable.channel(channel).actions
+          for action in cable.channel(channel)._events
             actionMethod = "handle#{_capitalize(action)}"
             cable.channel(channel).on action, @[actionMethod] if @[actionMethod]?
 
@@ -29,7 +29,7 @@ ChannelMixin = ->
           cable.channel(channel).removeListener 'rejected', @handleDisconnected if @handleDisconnected?
           cable.channel(channel).removeListener 'received', @handleReceived if @handleReceived?
 
-          for action in cable.channel(channel).actions
+          for action in cable.channel(channel)._events
             actionMethod = "handle#{_capitalize(action)}"
             cable.channel(channel).removeListener action, @[actionMethod] if @[actionMethod]?
 

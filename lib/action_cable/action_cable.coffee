@@ -19,7 +19,7 @@ ActionCable =
   stopDebugging: ->
     @debugging = null
 
-  log: (messages...) ->
+  log: (messages...) =>
     if @debugging
       messages.push(Date.now())
       @logger.log("[ActionCable]", messages...)

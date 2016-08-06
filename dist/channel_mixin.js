@@ -28,7 +28,7 @@ ChannelMixin = function() {
           }
           results.push((function() {
             var j, len1, ref, results1;
-            ref = cable.channel(channel).actions;
+            ref = cable.channel(channel)._events;
             results1 = [];
             for (j = 0, len1 = ref.length; j < len1; j++) {
               action = ref[j];
@@ -69,7 +69,7 @@ ChannelMixin = function() {
           }
           results.push((function() {
             var j, len1, ref, results1;
-            ref = cable.channel(channel).actions;
+            ref = cable.channel(channel)._events;
             results1 = [];
             for (j = 0, len1 = ref.length; j < len1; j++) {
               action = ref[j];

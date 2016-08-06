@@ -41,6 +41,7 @@ Connection = (function() {
         this.uninstallEventHandlers();
       }
       this.webSocket = new this.WebSocket(this.consumer.url, protocols);
+      this.webSocket.protocol = 'actioncable-v1-json';
       this.installEventHandlers();
       this.monitor.start();
       return true;
