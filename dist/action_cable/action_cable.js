@@ -22,16 +22,14 @@ ActionCable = {
   stopDebugging: function() {
     return this.debugging = null;
   },
-  log: (function(_this) {
-    return function() {
-      var messages, ref;
-      messages = 1 <= arguments.length ? slice.call(arguments, 0) : [];
-      if (_this.debugging) {
-        messages.push(Date.now());
-        return (ref = _this.logger).log.apply(ref, ["[ActionCable]"].concat(slice.call(messages)));
-      }
-    };
-  })(this)
+  log: function() {
+    var messages, ref;
+    messages = 1 <= arguments.length ? slice.call(arguments, 0) : [];
+    if (ActionCable.debugging) {
+      messages.push(Date.now());
+      return (ref = ActionCable.logger).log.apply(ref, ["[ActionCable]"].concat(slice.call(messages)));
+    }
+  }
 };
 
 module.exports = ActionCable;

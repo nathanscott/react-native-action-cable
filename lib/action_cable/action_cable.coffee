@@ -19,9 +19,9 @@ ActionCable =
   stopDebugging: ->
     @debugging = null
 
-  log: (messages...) =>
-    if @debugging
+  log: (messages...) ->
+    if ActionCable.debugging
       messages.push(Date.now())
-      @logger.log("[ActionCable]", messages...)
+      ActionCable.logger.log("[ActionCable]", messages...)
 
 module.exports = ActionCable
