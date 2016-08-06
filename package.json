@@ -1,19 +1,19 @@
 {
   "name": "action-cable-react",
-  "version": "0.1.1",
-  "description": "Use Rails 5 ActionCable channels with React for realtime magic.",
+  "version": "0.1.2",
+  "description": "Use Rails 5 ActionCable channels with React Native for realtime magic.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/schneidmaster/action-cable-react.git"
+    "url": "git+https://github.com/kesha-antonov/action-cable-react-native.git"
   },
   "keywords": [
     "rails",
     "actioncable",
-    "react"
+    "react native"
   ],
   "author": "Zach Schneider <zach@schneid.io>",
   "license": "MIT",
