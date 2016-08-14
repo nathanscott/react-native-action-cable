@@ -4,8 +4,11 @@ ChannelMixin = ->
   channelNames = Array::slice.call(arguments)
 
   {
+    getCable: ->
+      @props.cable or @context.cable or @props.store.cable
+
     componentDidMount: ->
-      cable = @props.cable or @context.cable
+      cable = getCable()
       @mounted = true
 
       for channel in channelNames
@@ -20,7 +23,7 @@ ChannelMixin = ->
             cable.channel(channel).on action, @[actionMethod] if @[actionMethod]?
 
     componentWillUnmount: ->
-      cable = @props.cable or @context.cable
+      cable = getCable()
       @mounted = false
       for channel in channelNames
         if cable.channel(channel)
@@ -34,7 +37,7 @@ ChannelMixin = ->
             cable.channel(channel).removeListener action, @[actionMethod] if @[actionMethod]?
 
     perform: (channel, action, data = {}) ->
-      cable = @props.cable or @context.cable
+      cable = getCable()
       cable.channel(channel).perform(action, data)
   }
 

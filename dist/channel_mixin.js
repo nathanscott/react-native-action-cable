@@ -6,9 +6,12 @@ ChannelMixin = function() {
   var channelNames;
   channelNames = Array.prototype.slice.call(arguments);
   return {
+    getCable: function() {
+      return this.props.cable || this.context.cable || this.props.store.cable;
+    },
     componentDidMount: function() {
       var action, actionMethod, cable, channel, i, len, results;
-      cable = this.props.cable || this.context.cable;
+      cable = getCable();
       this.mounted = true;
       results = [];
       for (i = 0, len = channelNames.length; i < len; i++) {
@@ -49,7 +52,7 @@ ChannelMixin = function() {
     },
     componentWillUnmount: function() {
       var action, actionMethod, cable, channel, i, len, results;
-      cable = this.props.cable || this.context.cable;
+      cable = getCable();
       this.mounted = false;
       results = [];
       for (i = 0, len = channelNames.length; i < len; i++) {
@@ -93,7 +96,7 @@ ChannelMixin = function() {
       if (data == null) {
         data = {};
       }
-      cable = this.props.cable || this.context.cable;
+      cable = getCable();
       return cable.channel(channel).perform(action, data);
     }
   };

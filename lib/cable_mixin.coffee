@@ -1,8 +1,8 @@
 CableMixin = (React) ->
   componentWillMount: ->
-    unless @props.cable || (@context && @context.cable)
+    unless @props.cable or (@context and @context.cable) or (@props.store and @props.store.cable)
       namePart = if @constructor.displayName then ' of ' + @constructor.displayName else ''
-      throw new Error("Could not find cable on this.props or this.context#{namePart}")
+      throw new Error("Could not find cable on this.props or this.context or this.props.store #{namePart}")
 
   childContextTypes:
     cable:
@@ -18,7 +18,7 @@ CableMixin = (React) ->
     }
 
   getCable: ->
-    @props.cable or @context and @context.cable
+    @props.cable or (@context and @context.cable) or (@props.store and @props.store.cable)
 
 CableMixin.componentWillMount = ->
   throw new Error('ActionCableReact.CableMixin is a function that takes React as a ' +

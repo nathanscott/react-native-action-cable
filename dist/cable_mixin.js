@@ -4,9 +4,9 @@ CableMixin = function(React) {
   return {
     componentWillMount: function() {
       var namePart;
-      if (!(this.props.cable || (this.context && this.context.cable))) {
+      if (!(this.props.cable || (this.context && this.context.cable) || (this.props.store && this.props.store.cable))) {
         namePart = this.constructor.displayName ? ' of ' + this.constructor.displayName : '';
-        throw new Error("Could not find cable on this.props or this.context" + namePart);
+        throw new Error("Could not find cable on this.props or this.context or this.props.store " + namePart);
       }
     },
     childContextTypes: {
@@ -21,7 +21,7 @@ CableMixin = function(React) {
       };
     },
     getCable: function() {
-      return this.props.cable || this.context && this.context.cable;
+      return this.props.cable || (this.context && this.context.cable) || (this.props.store && this.props.store.cable);
     }
   };
 };
