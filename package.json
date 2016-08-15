@@ -35,6 +35,6 @@
     "lodash.capitalize": "^4.2.0",
     "eventemitter3": "1.2.0",
     "react": "15.2.1",
-    "react-native": "0.30.0"
+    "react-native": "0.31.0"
   }
 }
