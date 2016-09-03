@@ -33,8 +33,6 @@
   },
   "dependencies": {
     "lodash.capitalize": "^4.2.1",
-    "eventemitter3": "1.2.0",
-    "react": "15.3.0",
-    "react-native": "0.32.0"
+    "eventemitter3": "1.2.0"
   }
 }
