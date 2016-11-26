@@ -14,6 +14,7 @@ Subscription = (function(superClass) {
     if (params == null) {
       params = {};
     }
+    EventEmitter.call(this);
     this.identifier = JSON.stringify(params);
     extend(this, mixin);
   }
