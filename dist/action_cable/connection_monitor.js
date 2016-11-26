@@ -1,1 +1,138 @@
-var AppState,ConnectionMonitor,bind=function(t,n){return function(){return t.apply(n,arguments)}};AppState=require("react-native").AppState,ConnectionMonitor=function(){function t(t,n){this.connection=t,this.log=n,this.visibilityDidChange=bind(this.visibilityDidChange,this),this.reconnectAttempts=0}var n,e,o;return t.pollInterval={min:3,max:30},t.staleThreshold=6,t.prototype.start=function(){if(!this.isRunning())return this.startedAt=e(),delete this.stoppedAt,this.startPolling(),AppState.addEventListener("change",this.visibilityDidChange),this.log("ConnectionMonitor started. pollInterval = "+this.getPollInterval()+" ms")},t.prototype.stop=function(){if(this.isRunning())return this.stoppedAt=e(),this.stopPolling(),AppState.removeEventListener("change",this.visibilityDidChange),this.log("ConnectionMonitor stopped")},t.prototype.isRunning=function(){return null!=this.startedAt&&null==this.stoppedAt},t.prototype.recordPing=function(){return this.pingedAt=e()},t.prototype.recordConnect=function(){return this.reconnectAttempts=0,this.recordPing(),delete this.disconnectedAt,this.log("ConnectionMonitor recorded connect")},t.prototype.recordDisconnect=function(){return this.disconnectedAt=e(),this.log("ConnectionMonitor recorded disconnect")},t.prototype.startPolling=function(){return this.stopPolling(),this.poll()},t.prototype.stopPolling=function(){return clearTimeout(this.pollTimeout)},t.prototype.poll=function(){return this.pollTimeout=setTimeout(function(t){return function(){return t.reconnectIfStale(),t.poll()}}(this),this.getPollInterval())},t.prototype.getPollInterval=function(){var t,e,o,i;return i=this.constructor.pollInterval,o=i.min,e=i.max,t=5*Math.log(this.reconnectAttempts+1),Math.round(1e3*n(t,o,e))},t.prototype.reconnectIfStale=function(){if(this.connectionIsStale())return this.log("ConnectionMonitor detected stale connection. reconnectAttempts = "+this.reconnectAttempts+", pollInterval = "+this.getPollInterval()+" ms, time disconnected = "+o(this.disconnectedAt)+" s, stale threshold = "+this.constructor.staleThreshold+" s"),this.reconnectAttempts++,this.disconnectedRecently()?this.log("ConnectionMonitor skipping reopening recent disconnect"):(this.log("ConnectionMonitor reopening"),this.connection.reopen())},t.prototype.connectionIsStale=function(){var t;return o(null!=(t=this.pingedAt)?t:this.startedAt)>this.constructor.staleThreshold},t.prototype.disconnectedRecently=function(){return this.disconnectedAt&&o(this.disconnectedAt)<this.constructor.staleThreshold},t.prototype.visibilityDidChange=function(){if("active"===AppState.currentState)return setTimeout(function(t){return function(){if(t.connectionIsStale()||!t.connection.isOpen())return t.log("ConnectionMonitor reopening stale connection on change. visbilityState = "+AppState.currentState),t.connection.reopen()}}(this),200)},e=function(){return(new Date).getTime()},o=function(t){return(e()-t)/1e3},n=function(t,n,e){return Math.max(n,Math.min(e,t))},t}(),module.exports=ConnectionMonitor;
+var AppState, ConnectionMonitor,
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+
+AppState = require('react-native').AppState;
+
+ConnectionMonitor = (function() {
+  var clamp, now, secondsSince;
+
+  ConnectionMonitor.pollInterval = {
+    min: 3,
+    max: 30
+  };
+
+  ConnectionMonitor.staleThreshold = 6;
+
+  function ConnectionMonitor(connection, log) {
+    this.connection = connection;
+    this.log = log;
+    this.visibilityDidChange = bind(this.visibilityDidChange, this);
+    this.reconnectAttempts = 0;
+  }
+
+  ConnectionMonitor.prototype.start = function() {
+    if (!this.isRunning()) {
+      this.startedAt = now();
+      delete this.stoppedAt;
+      this.startPolling();
+      AppState.addEventListener("change", this.visibilityDidChange);
+      return this.log("ConnectionMonitor started. pollInterval = " + (this.getPollInterval()) + " ms");
+    }
+  };
+
+  ConnectionMonitor.prototype.stop = function() {
+    if (this.isRunning()) {
+      this.stoppedAt = now();
+      this.stopPolling();
+      AppState.removeEventListener("change", this.visibilityDidChange);
+      return this.log("ConnectionMonitor stopped");
+    }
+  };
+
+  ConnectionMonitor.prototype.isRunning = function() {
+    return (this.startedAt != null) && (this.stoppedAt == null);
+  };
+
+  ConnectionMonitor.prototype.recordPing = function() {
+    return this.pingedAt = now();
+  };
+
+  ConnectionMonitor.prototype.recordConnect = function() {
+    this.reconnectAttempts = 0;
+    this.recordPing();
+    delete this.disconnectedAt;
+    return this.log("ConnectionMonitor recorded connect");
+  };
+
+  ConnectionMonitor.prototype.recordDisconnect = function() {
+    this.disconnectedAt = now();
+    return this.log("ConnectionMonitor recorded disconnect");
+  };
+
+  ConnectionMonitor.prototype.startPolling = function() {
+    this.stopPolling();
+    return this.poll();
+  };
+
+  ConnectionMonitor.prototype.stopPolling = function() {
+    return clearTimeout(this.pollTimeout);
+  };
+
+  ConnectionMonitor.prototype.poll = function() {
+    return this.pollTimeout = setTimeout((function(_this) {
+      return function() {
+        _this.reconnectIfStale();
+        return _this.poll();
+      };
+    })(this), this.getPollInterval());
+  };
+
+  ConnectionMonitor.prototype.getPollInterval = function() {
+    var interval, max, min, ref;
+    ref = this.constructor.pollInterval, min = ref.min, max = ref.max;
+    interval = 5 * Math.log(this.reconnectAttempts + 1);
+    return Math.round(clamp(interval, min, max) * 1000);
+  };
+
+  ConnectionMonitor.prototype.reconnectIfStale = function() {
+    if (this.connectionIsStale()) {
+      this.log("ConnectionMonitor detected stale connection. reconnectAttempts = " + this.reconnectAttempts + ", pollInterval = " + (this.getPollInterval()) + " ms, time disconnected = " + (secondsSince(this.disconnectedAt)) + " s, stale threshold = " + this.constructor.staleThreshold + " s");
+      this.reconnectAttempts++;
+      if (this.disconnectedRecently()) {
+        return this.log("ConnectionMonitor skipping reopening recent disconnect");
+      } else {
+        this.log("ConnectionMonitor reopening");
+        return this.connection.reopen();
+      }
+    }
+  };
+
+  ConnectionMonitor.prototype.connectionIsStale = function() {
+    var ref;
+    return secondsSince((ref = this.pingedAt) != null ? ref : this.startedAt) > this.constructor.staleThreshold;
+  };
+
+  ConnectionMonitor.prototype.disconnectedRecently = function() {
+    return this.disconnectedAt && secondsSince(this.disconnectedAt) < this.constructor.staleThreshold;
+  };
+
+  ConnectionMonitor.prototype.visibilityDidChange = function() {
+    if (AppState.currentState === "active") {
+      return setTimeout((function(_this) {
+        return function() {
+          if (_this.connectionIsStale() || !_this.connection.isOpen()) {
+            _this.log("ConnectionMonitor reopening stale connection on change. visbilityState = " + AppState.currentState);
+            return _this.connection.reopen();
+          }
+        };
+      })(this), 200);
+    }
+  };
+
+  now = function() {
+    return new Date().getTime();
+  };
+
+  secondsSince = function(time) {
+    return (now() - time) / 1000;
+  };
+
+  clamp = function(number, min, max) {
+    return Math.max(min, Math.min(max, number));
+  };
+
+  return ConnectionMonitor;
+
+})();
+
+module.exports = ConnectionMonitor;
