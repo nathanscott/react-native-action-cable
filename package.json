@@ -15,7 +15,7 @@
     "actioncable",
     "react native"
   ],
-  "author": "Zach Schneider <zach@schneid.io>",
+  "author": "Zach Schneider <zach@schneid.io>, Innokentii Antonov",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/kesha-antonov/action-cable-react-native/issues"
