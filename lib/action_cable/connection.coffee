@@ -83,8 +83,13 @@ class Connection
 
   events:
     message: (event) ->
-      return unless @isProtocolSupported()
-      {identifier, message, type} = JSON.parse(event.data)
+      unless @isProtocolSupported()
+        event.data.close()
+        return
+
+      { identifier, message, type } = JSON.parse(event.data)
+      event.data.close()
+
       switch type
         when message_types.welcome
           @monitor.recordConnect()
