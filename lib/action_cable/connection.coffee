@@ -84,11 +84,11 @@ class Connection
   events:
     message: (event) ->
       unless @isProtocolSupported()
-        event.data.close()
+        event.data.close() if event.data.close?
         return
 
       { identifier, message, type } = JSON.parse(event.data)
-      event.data.close()
+      event.data.close() if event.data.close?
 
       switch type
         when message_types.welcome
