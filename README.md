@@ -5,13 +5,13 @@
 
 Use Rails 5 ActionCable channels with React Native for realtime magic.
 
-This is a fork from https://github.com/kesha-antonov/action-cable-react-native
+This is a fork from https://github.com/kesha-antonov/react-native-action-cable
 
 ## Overview
 
 action-cable-react is a npm/bower package to bind one or more [ActionCable](https://github.com/rails/rails/tree/master/actioncable) channels to React components. This allows you to define how each individual component should respond to new messages from each channel, bringing ActionCable nicely in line with the React data model and permitting usage with a Rails API and standalone frontend React application.
 
-Make sure to check out the example [server](https://github.com/kesha-antonov/action-cable-react-native-example-server) and client ([ES6](https://github.com/kesha-antonov/action-cable-react-native-example-client) or [CoffeeScript](https://github.com/kesha-antonov/action-cable-react-native-example-coffee)) applications to try it out for yourself.
+Make sure to check out the example [server](https://github.com/kesha-antonov/react-native-action-cable-example-server) and client ([ES6](https://github.com/kesha-antonov/react-native-action-cable-example-client) or [CoffeeScript](https://github.com/kesha-antonov/react-native-action-cable-example-coffee)) applications to try it out for yourself.
 
 ## Usage
 
@@ -36,7 +36,7 @@ action-cable-react breaks slightly with the documented Rails method for creating
 
 ## Contributing
 
-1. Fork it ( https://github.com/kesha-antonov/action-cable-react-native/fork )
+1. Fork it ( https://github.com/kesha-antonov/react-native-action-cable/fork )
 2. Create your feature branch (git checkout -b my-new-feature)
 3. Commit your changes (git commit -am 'Add some feature')
 4. Push to the branch (git push origin my-new-feature)
