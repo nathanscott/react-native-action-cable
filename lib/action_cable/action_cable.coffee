@@ -5,21 +5,21 @@ ActionCable =
   WebSocket: window.WebSocket
   logger: window.console
 
-  createConsumer: (url) =>
+  createConsumer: (url) ->
     new Consumer(@createWebSocketURL(url), @log, @WebSocket)
 
-  createWebSocketURL: (url) =>
+  createWebSocketURL: (url) ->
     if url and not /^wss?:/i.test(url)
       url = url.replace('http', 'ws')
     url
 
-  startDebugging: =>
+  startDebugging: ->
     @debugging = true
 
-  stopDebugging: =>
+  stopDebugging: ->
     @debugging = null
 
-  log: (messages...) =>
+  log: (messages...) ->
     if ActionCable.debugging
       messages.push(Date.now())
       ActionCable.logger.log("[ActionCable]", messages...)

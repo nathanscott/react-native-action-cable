@@ -1,10 +1,10 @@
 class Cable
   constructor: (@channels) ->
 
-  channel: (name) =>
+  channel: (name) ->
     @channels[name]
 
-  setChannel: (name, channel) =>
+  setChannel: (name, channel) ->
     @channels[name] = channel
 
 module.exports = Cable

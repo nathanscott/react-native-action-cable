@@ -1,22 +1,22 @@
 Connection = require('./connection')
 Subscriptions = require('./subscriptions')
-Subscription = require('./subscription')
+
 
 class Consumer
   constructor: (@url, @log, @WebSocket) ->
     @subscriptions = new Subscriptions(@)
     @connection = new Connection(@, @log, @WebSocket)
 
-  send: (data) =>
+  send: (data) ->
     @connection.send(data)
 
-  connect: =>
+  connect: ->
     @connection.open()
 
-  disconnect: =>
+  disconnect: ->
     @connection.close(allowReconnect: false)
 
-  ensureActiveConnection: =>
+  ensureActiveConnection: ->
     unless @connection.isActive()
       @connection.open()
 

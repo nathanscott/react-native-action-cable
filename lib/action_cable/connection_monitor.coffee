@@ -10,7 +10,7 @@ class ConnectionMonitor
   constructor: (@connection, @log) ->
     @reconnectAttempts = 0
 
-  start: =>
+  start: ->
     unless @isRunning()
       @startedAt = now()
       delete @stoppedAt
@@ -18,50 +18,50 @@ class ConnectionMonitor
       AppState.addEventListener("change", @visibilityDidChange)
       @log("ConnectionMonitor started. pollInterval = #{@getPollInterval()} ms")
 
-  stop: =>
+  stop: ->
     if @isRunning()
       @stoppedAt = now()
       @stopPolling()
       AppState.removeEventListener("change", @visibilityDidChange)
       @log("ConnectionMonitor stopped")
 
-  isRunning: =>
+  isRunning: ->
     @startedAt? and not @stoppedAt?
 
-  recordPing: =>
+  recordPing: ->
     @pingedAt = now()
 
-  recordConnect: =>
+  recordConnect: ->
     @reconnectAttempts = 0
     @recordPing()
     delete @disconnectedAt
     @log("ConnectionMonitor recorded connect")
 
-  recordDisconnect: =>
+  recordDisconnect: ->
     @disconnectedAt = now()
     @log("ConnectionMonitor recorded disconnect")
 
   # Private
 
-  startPolling: =>
+  startPolling: ->
     @stopPolling()
     @poll()
 
-  stopPolling: =>
+  stopPolling: ->
     clearTimeout(@pollTimeout)
 
-  poll: =>
+  poll: ->
     @pollTimeout = setTimeout =>
       @reconnectIfStale()
       @poll()
     , @getPollInterval()
 
-  getPollInterval: =>
+  getPollInterval: ->
     {min, max} = @constructor.pollInterval
     interval = 5 * Math.log(@reconnectAttempts + 1)
     Math.round(clamp(interval, min, max) * 1000)
 
-  reconnectIfStale: =>
+  reconnectIfStale: ->
     if @connectionIsStale()
       @log("ConnectionMonitor detected stale connection. reconnectAttempts = #{@reconnectAttempts}, pollInterval = #{@getPollInterval()} ms, time disconnected = #{secondsSince(@disconnectedAt)} s, stale threshold = #{@constructor.staleThreshold} s")
       @reconnectAttempts++
@@ -71,13 +71,13 @@ class ConnectionMonitor
         @log("ConnectionMonitor reopening")
         @connection.reopen()
 
-  connectionIsStale: =>
+  connectionIsStale: ->
     secondsSince(@pingedAt ? @startedAt) > @constructor.staleThreshold
 
-  disconnectedRecently: =>
+  disconnectedRecently: ->
     @disconnectedAt and secondsSince(@disconnectedAt) < @constructor.staleThreshold
 
-  visibilityDidChange: =>
+  visibilityDidChange: ->
     if AppState.currentState is "active"
       setTimeout =>
         if @connectionIsStale() or not @connection.isOpen()

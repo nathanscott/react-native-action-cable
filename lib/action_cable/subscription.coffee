@@ -1,15 +1,12 @@
 EventEmitter = require('eventemitter3')
 
 class Subscription extends EventEmitter
-  constructor: (@consumer, params = {}, mixin) ->
+  constructor: (@consumer, params = {}) ->
     super()
-    # NOTE: THIS IS IMPORTANT TO INIT *_events* AND *_eventsCount* . CHECK THAT ALL IS OK
-    # EventEmitter.call( @ )
 
     @identifier = JSON.stringify(params)
-    extend(@, mixin)
 
-  # Perform a channel action with the optional data passed as an attribute
+  # NOTE: PERFORM A CHANNEL ACTION WITH THE OPTIONAL DATA PASSED AS AN ATTRIBUTE
   perform: (action, data = {}) =>
     data.action = action
     @send(data)
@@ -19,12 +16,6 @@ class Subscription extends EventEmitter
 
   unsubscribe: =>
     @consumer.subscriptions.remove(this)
-
-  extend = (object, properties) ->
-    if properties?
-      for key, value of properties
-        object[key] = value
-    object
 
   connected: =>
     @emit('connected')
