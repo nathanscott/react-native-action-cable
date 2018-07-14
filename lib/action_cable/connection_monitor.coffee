@@ -1,5 +1,8 @@
 { AppState } = require('react-native')
 
+
+APP_STATE_ACTIVE = 'active'
+
 class ConnectionMonitor
   @pollInterval:
     min: 3
@@ -77,8 +80,8 @@ class ConnectionMonitor
   disconnectedRecently: ->
     @disconnectedAt and secondsSince(@disconnectedAt) < @constructor.staleThreshold
 
-  visibilityDidChange: ->
-    if AppState.currentState is "active"
+  visibilityDidChange: =>
+    if AppState.currentState is APP_STATE_ACTIVE
       setTimeout =>
         if @connectionIsStale() or not @connection.isOpen()
           @log("ConnectionMonitor reopening stale connection on change. visbilityState = #{AppState.currentState}")
