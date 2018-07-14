@@ -1,1 +1,126 @@
-var INTERNAL,Subscription,Subscriptions,slice=[].slice;INTERNAL=require("./internal"),Subscription=require("./subscription"),Subscriptions=function(){function t(t){this.consumer=t,this.subscriptions=[]}return t.prototype.create=function(t,i){var n,r,e;return n=t,r="object"==typeof n?n:{channel:n},e=new Subscription(this.consumer,r,i),this.add(e)},t.prototype.add=function(t){return this.subscriptions.push(t),this.consumer.ensureActiveConnection(),this.notify(t,"initialized"),this.sendCommand(t,"subscribe"),t},t.prototype.remove=function(t){return this.forget(t),this.findAll(t.identifier).length||this.sendCommand(t,"unsubscribe"),t},t.prototype.reject=function(t){var i,n,r,e,s;for(r=this.findAll(t),e=[],i=0,n=r.length;i<n;i++)s=r[i],this.forget(s),this.notify(s,"rejected"),e.push(s);return e},t.prototype.forget=function(t){var i;return this.subscriptions=function(){var n,r,e,s;for(e=this.subscriptions,s=[],n=0,r=e.length;n<r;n++)(i=e[n])!==t&&s.push(i);return s}.call(this),t},t.prototype.findAll=function(t){var i,n,r,e,s;for(r=this.subscriptions,e=[],i=0,n=r.length;i<n;i++)s=r[i],s.identifier===t&&e.push(s);return e},t.prototype.reload=function(){var t,i,n,r,e;for(n=this.subscriptions,r=[],t=0,i=n.length;t<i;t++)e=n[t],r.push(this.sendCommand(e,"subscribe"));return r},t.prototype.notifyAll=function(){var t,i,n,r,e,s,o;for(i=arguments[0],t=2<=arguments.length?slice.call(arguments,1):[],e=this.subscriptions,s=[],n=0,r=e.length;n<r;n++)o=e[n],s.push(this.notify.apply(this,[o,i].concat(slice.call(t))));return s},t.prototype.notify=function(){var t,i,n,r,e,s,o;for(s=arguments[0],i=arguments[1],t=3<=arguments.length?slice.call(arguments,2):[],o="string"==typeof s?this.findAll(s):[s],e=[],n=0,r=o.length;n<r;n++)s=o[n],e.push("function"==typeof s[i]?s[i].apply(s,t):void 0);return e},t.prototype.sendCommand=function(t,i){var n;return n=t.identifier,this.consumer.send({command:i,identifier:n})},t}(),module.exports=Subscriptions;
+var INTERNAL, Subscription, Subscriptions;
+
+INTERNAL = require('./internal');
+
+Subscription = require('./subscription');
+
+Subscriptions = class Subscriptions {
+  constructor(consumer) {
+    this.consumer = consumer;
+    this.subscriptions = [];
+  }
+
+  create(channelName, mixin) {
+    var channel, params, subscription;
+    channel = channelName;
+    params = typeof channel === 'object' ? channel : {channel};
+    subscription = new Subscription(this.consumer, params, mixin);
+    return this.add(subscription);
+  }
+
+  // Private
+  add(subscription) {
+    this.subscriptions.push(subscription);
+    this.consumer.ensureActiveConnection();
+    this.notify(subscription, "initialized");
+    this.sendCommand(subscription, "subscribe");
+    return subscription;
+  }
+
+  remove(subscription) {
+    this.forget(subscription);
+    if (!this.findAll(subscription.identifier).length) {
+      this.sendCommand(subscription, "unsubscribe");
+    }
+    return subscription;
+  }
+
+  reject(identifier) {
+    var i, len, ref, results, subscription;
+    ref = this.findAll(identifier);
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      subscription = ref[i];
+      this.forget(subscription);
+      this.notify(subscription, "rejected");
+      results.push(subscription);
+    }
+    return results;
+  }
+
+  forget(subscription) {
+    var s;
+    this.subscriptions = (function() {
+      var i, len, ref, results;
+      ref = this.subscriptions;
+      results = [];
+      for (i = 0, len = ref.length; i < len; i++) {
+        s = ref[i];
+        if (s !== subscription) {
+          results.push(s);
+        }
+      }
+      return results;
+    }).call(this);
+    return subscription;
+  }
+
+  findAll(identifier) {
+    var i, len, ref, results, s;
+    ref = this.subscriptions;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      s = ref[i];
+      if (s.identifier === identifier) {
+        results.push(s);
+      }
+    }
+    return results;
+  }
+
+  reload() {
+    var i, len, ref, results, subscription;
+    ref = this.subscriptions;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      subscription = ref[i];
+      results.push(this.sendCommand(subscription, "subscribe"));
+    }
+    return results;
+  }
+
+  notifyAll(callbackName, ...args) {
+    var i, len, ref, results, subscription;
+    ref = this.subscriptions;
+    results = [];
+    for (i = 0, len = ref.length; i < len; i++) {
+      subscription = ref[i];
+      results.push(this.notify(subscription, callbackName, ...args));
+    }
+    return results;
+  }
+
+  notify(subscription, callbackName, ...args) {
+    var i, len, results, subscriptions;
+    if (typeof subscription === "string") {
+      subscriptions = this.findAll(subscription);
+    } else {
+      subscriptions = [subscription];
+    }
+    results = [];
+    for (i = 0, len = subscriptions.length; i < len; i++) {
+      subscription = subscriptions[i];
+      results.push(typeof subscription[callbackName] === "function" ? subscription[callbackName](...args) : void 0);
+    }
+    return results;
+  }
+
+  sendCommand(subscription, command) {
+    var identifier;
+    ({identifier} = subscription);
+    return this.consumer.send({command, identifier});
+  }
+
+};
+
+module.exports = Subscriptions;

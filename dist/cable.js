@@ -1,1 +1,19 @@
-var Cable;Cable=function(){function n(n){this.channels=n}return n.prototype.channel=function(n){return this.channels[n]},n.prototype.setChannel=function(n,e){return this.channels[n]=e},n}(),module.exports=Cable;
+var Cable;
+
+Cable = class Cable {
+  constructor(channels) {
+    this.channels = channels;
+  }
+
+  
+  channel(name) {
+    return this.channels[name];
+  }
+
+  setChannel(name, channel) {
+    return this.channels[name] = channel;
+  }
+
+};
+
+module.exports = Cable;

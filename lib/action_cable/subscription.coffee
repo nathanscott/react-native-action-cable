@@ -2,8 +2,9 @@ EventEmitter = require('eventemitter3')
 
 class Subscription extends EventEmitter
   constructor: (@consumer, params = {}, mixin) ->
+    super()
     # NOTE: THIS IS IMPORTANT TO INIT *_events* AND *_eventsCount* . CHECK THAT ALL IS OK
-    EventEmitter.call( @ )
+    # EventEmitter.call( @ )
 
     @identifier = JSON.stringify(params)
     extend(@, mixin)

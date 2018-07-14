@@ -11,8 +11,8 @@ gulp.task 'clean', ->
 gulp.task 'coffee', ['clean'], ->
   gulp.src('lib/**/*.coffee')
     .pipe(coffee(bare: true))
-    .pipe(uglify())
     .pipe(gulp.dest('dist'))
+    # .pipe(uglify())
 
 
 # NOTE: DISABLE bower SINCE USING NPM

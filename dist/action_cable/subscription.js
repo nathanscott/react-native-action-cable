@@ -1,1 +1,70 @@
-var EventEmitter,Subscription,extend1=function(t,e){function n(){this.constructor=t}for(var r in e)hasProp.call(e,r)&&(t[r]=e[r]);return n.prototype=e.prototype,t.prototype=new n,t.__super__=e.prototype,t},hasProp={}.hasOwnProperty;EventEmitter=require("eventemitter3"),Subscription=function(t){function e(t,e,r){this.consumer=t,null==e&&(e={}),EventEmitter.call(this),this.identifier=JSON.stringify(e),n(this,r)}var n;return extend1(e,t),e.prototype.perform=function(t,e){return null==e&&(e={}),e.action=t,this.send(e)},e.prototype.send=function(t){return this.consumer.send({command:"message",identifier:this.identifier,data:JSON.stringify(t)})},e.prototype.unsubscribe=function(){return this.consumer.subscriptions.remove(this)},n=function(t,e){var n,r;if(null!=e)for(n in e)r=e[n],t[n]=r;return t},e.prototype.connected=function(){return this.emit("connected")},e.prototype.disconnected=function(){return this.emit("disconnected")},e.prototype.rejected=function(){return this.emit("rejected")},e.prototype.received=function(t){return t.action=null!=t.action?t.action:"received",this.emit(t.action,t)},e}(EventEmitter),module.exports=Subscription;
+var EventEmitter, Subscription;
+
+EventEmitter = require('eventemitter3');
+
+Subscription = (function() {
+  var extend;
+
+  class Subscription extends EventEmitter {
+    constructor(consumer, params = {}, mixin) {
+      super();
+      this.consumer = consumer;
+      // NOTE: THIS IS IMPORTANT TO INIT *_events* AND *_eventsCount* . CHECK THAT ALL IS OK
+      // EventEmitter.call( @ )
+      this.identifier = JSON.stringify(params);
+      extend(this, mixin);
+    }
+
+    // Perform a channel action with the optional data passed as an attribute
+    perform(action, data = {}) {
+      data.action = action;
+      return this.send(data);
+    }
+
+    send(data) {
+      return this.consumer.send({
+        command: 'message',
+        identifier: this.identifier,
+        data: JSON.stringify(data)
+      });
+    }
+
+    unsubscribe() {
+      return this.consumer.subscriptions.remove(this);
+    }
+
+    connected() {
+      return this.emit('connected');
+    }
+
+    disconnected() {
+      return this.emit('disconnected');
+    }
+
+    rejected() {
+      return this.emit('rejected');
+    }
+
+    received(data) {
+      data.action = data.action != null ? data.action : 'received';
+      return this.emit(data.action, data);
+    }
+
+  };
+
+  extend = function(object, properties) {
+    var key, value;
+    if (properties != null) {
+      for (key in properties) {
+        value = properties[key];
+        object[key] = value;
+      }
+    }
+    return object;
+  };
+
+  return Subscription;
+
+}).call(this);
+
+module.exports = Subscription;

@@ -1,1 +1,40 @@
-var Connection,Consumer,Subscription,Subscriptions;Connection=require("./connection"),Subscriptions=require("./subscriptions"),Subscription=require("./subscription"),Consumer=function(){function n(n,o,t){this.url=n,this.log=o,this.WebSocket=t,this.subscriptions=new Subscriptions(this),this.connection=new Connection(this,this.log,this.WebSocket)}return n.prototype.send=function(n){return this.connection.send(n)},n.prototype.connect=function(){return this.connection.open()},n.prototype.disconnect=function(){return this.connection.close({allowReconnect:!1})},n.prototype.ensureActiveConnection=function(){if(!this.connection.isActive())return this.connection.open()},n}(),module.exports=Consumer;
+var Connection, Consumer, Subscription, Subscriptions;
+
+Connection = require('./connection');
+
+Subscriptions = require('./subscriptions');
+
+Subscription = require('./subscription');
+
+Consumer = class Consumer {
+  constructor(url, log, WebSocket) {
+    this.url = url;
+    this.log = log;
+    this.WebSocket = WebSocket;
+    this.subscriptions = new Subscriptions(this);
+    this.connection = new Connection(this, this.log, this.WebSocket);
+  }
+
+  send(data) {
+    return this.connection.send(data);
+  }
+
+  connect() {
+    return this.connection.open();
+  }
+
+  disconnect() {
+    return this.connection.close({
+      allowReconnect: false
+    });
+  }
+
+  ensureActiveConnection() {
+    if (!this.connection.isActive()) {
+      return this.connection.open();
+    }
+  }
+
+};
+
+module.exports = Consumer;
