@@ -11,7 +11,7 @@ class Connection
     @monitor = new ConnectionMonitor(@, @log)
     @disconnected = true
 
-  send: (data) ->
+  send: (data) =>
     if @isOpen()
       @webSocket.send(JSON.stringify(data))
       true
@@ -32,11 +32,11 @@ class Connection
       @monitor.start()
       true
 
-  close: ({allowReconnect} = {allowReconnect: true}) ->
+  close: ({allowReconnect} = {allowReconnect: true}) =>
     @monitor.stop() unless allowReconnect
     @webSocket?.close() if @isActive()
 
-  reopen: ->
+  reopen: =>
     @log("Reopening WebSocket, current state is #{@getState()}")
     if @isActive()
       try
@@ -49,40 +49,40 @@ class Connection
     else
       @open()
 
-  getProtocol: ->
+  getProtocol: =>
     @webSocket?.protocol
 
-  isOpen: ->
+  isOpen: =>
     @isState("open")
 
-  isActive: ->
+  isActive: =>
     @isState("open", "connecting")
 
   # Private
 
-  isProtocolSupported: ->
+  isProtocolSupported: =>
     @getProtocol() in supportedProtocols
 
-  isState: (states...) ->
+  isState: (states...) =>
     @getState() in states
 
-  getState: ->
+  getState: =>
     return state.toLowerCase() for state, value of WebSocket when value is @webSocket?.readyState
     null
 
-  installEventHandlers: ->
+  installEventHandlers: =>
     for eventName of @events
       handler = @events[eventName].bind(this)
       @webSocket["on#{eventName}"] = handler
     return
 
-  uninstallEventHandlers: ->
+  uninstallEventHandlers: =>
     for eventName of @events
-      @webSocket["on#{eventName}"] = ->
+      @webSocket["on#{eventName}"] = =>
     return
 
   events:
-    message: (event) ->
+    message: (event) =>
       unless @isProtocolSupported()
         event.data.close() if event.data.close?
         return
@@ -103,21 +103,21 @@ class Connection
         else
           @subscriptions.notify(identifier, "received", message)
 
-    open: ->
+    open: =>
       @log("WebSocket onopen event, using '#{@getProtocol()}' subprotocol")
       @disconnected = false
       if not @isProtocolSupported()
         @log("Protocol is unsupported. Stopping monitor and disconnecting.")
         @close(allowReconnect: false)
 
-    close: (event) ->
+    close: (event) =>
       @log("WebSocket onclose event")
       return if @disconnected
       @disconnected = true
       @monitor.recordDisconnect()
       @subscriptions.notifyAll("disconnected", {willAttemptReconnect: @monitor.isRunning()})
 
-    error: ->
+    error: =>
       @log("WebSocket onerror event")
 
 module.exports = Connection

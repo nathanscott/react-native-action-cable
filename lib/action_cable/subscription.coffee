@@ -10,14 +10,14 @@ class Subscription extends EventEmitter
     extend(@, mixin)
 
   # Perform a channel action with the optional data passed as an attribute
-  perform: (action, data = {}) ->
+  perform: (action, data = {}) =>
     data.action = action
     @send(data)
 
-  send: (data) ->
+  send: (data) =>
     @consumer.send(command: 'message', identifier: @identifier, data: JSON.stringify(data))
 
-  unsubscribe: ->
+  unsubscribe: =>
     @consumer.subscriptions.remove(this)
 
   extend = (object, properties) ->
@@ -26,16 +26,16 @@ class Subscription extends EventEmitter
         object[key] = value
     object
 
-  connected: ->
+  connected: =>
     @emit('connected')
 
-  disconnected: ->
+  disconnected: =>
     @emit('disconnected')
 
-  rejected: ->
+  rejected: =>
     @emit('rejected')
 
-  received: (data) ->
+  received: (data) =>
     data.action = if data.action? then data.action else 'received'
     @emit(data.action, data)
 
