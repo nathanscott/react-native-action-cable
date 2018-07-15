@@ -1,6 +1,6 @@
 {
   "name": "react-native-action-cable",
-  "version": "0.1.3",
+  "version": "1.0.1",
   "description": "Use Rails 5 ActionCable channels with React Native for realtime magic.",
   "main": "index.js",
   "scripts": {
