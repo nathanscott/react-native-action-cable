@@ -7,18 +7,18 @@ class Connection
   @reopenDelay: 500
 
   constructor: (@consumer, @log, @WebSocket) ->
-    {@subscriptions} = @consumer
+    { @subscriptions } = @consumer
     @monitor = new ConnectionMonitor(@, @log)
     @disconnected = true
 
-  send: (data) ->
+  send: (data) =>
     if @isOpen()
       @webSocket.send(JSON.stringify(data))
       true
     else
       false
 
-  open: ->
+  open: =>
     if @isActive()
       @log("Attempted to open WebSocket, but existing socket is #{@getState()}")
       false
@@ -32,11 +32,11 @@ class Connection
       @monitor.start()
       true
 
-  close: ({allowReconnect} = {allowReconnect: true}) ->
+  close: ({allowReconnect} = {allowReconnect: true}) =>
     @monitor.stop() unless allowReconnect
     @webSocket?.close() if @isActive()
 
-  reopen: ->
+  reopen: =>
     @log("Reopening WebSocket, current state is #{@getState()}")
     if @isActive()
       try
@@ -49,36 +49,36 @@ class Connection
     else
       @open()
 
-  getProtocol: ->
+  getProtocol: =>
     @webSocket?.protocol
 
-  isOpen: ->
+  isOpen: =>
     @isState("open")
 
-  isActive: ->
+  isActive: =>
     @isState("open", "connecting")
 
   # Private
 
-  isProtocolSupported: ->
+  isProtocolSupported: =>
     @getProtocol() in supportedProtocols
 
-  isState: (states...) ->
+  isState: (states...) =>
     @getState() in states
 
-  getState: ->
+  getState: =>
     return state.toLowerCase() for state, value of WebSocket when value is @webSocket?.readyState
     null
 
-  installEventHandlers: ->
+  installEventHandlers: =>
     for eventName of @events
       handler = @events[eventName].bind(this)
       @webSocket["on#{eventName}"] = handler
     return
 
-  uninstallEventHandlers: ->
+  uninstallEventHandlers: =>
     for eventName of @events
-      @webSocket["on#{eventName}"] = ->
+      @webSocket["on#{eventName}"] = =>
     return
 
   events:

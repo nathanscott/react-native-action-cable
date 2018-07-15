@@ -7,16 +7,16 @@ class Consumer
     @subscriptions = new Subscriptions(@)
     @connection = new Connection(@, @log, @WebSocket)
 
-  send: (data) ->
+  send: (data) =>
     @connection.send(data)
 
-  connect: ->
+  connect: =>
     @connection.open()
 
-  disconnect: ->
+  disconnect: =>
     @connection.close(allowReconnect: false)
 
-  ensureActiveConnection: ->
+  ensureActiveConnection: =>
     unless @connection.isActive()
       @connection.open()
 
