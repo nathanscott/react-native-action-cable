@@ -29,7 +29,7 @@ var cable = new Cable({
 });
 ```
 
-action-cable-react breaks slightly with the documented Rails method for creating a new channel here. It accepts either a channel name or a params object as the first argument, but as the second argument, it accepts an array of message types rather than an object of message handler definitions. These message types are automatically mapped to corresponding methods on React components -- for example, as we will see in a moment, a React component with the ChatChannel mixed in will automatically have the `handleNewMessage` method triggered when a new message of type `newMessage` is received.
+react-native-action-cable breaks slightly with the documented Rails method for creating a new channel here. It accepts either a channel name or a params object as the first argument, but as the second argument, it accepts an array of message types rather than an object of message handler definitions.
 
 
 ## Contributing
