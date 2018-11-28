@@ -11,6 +11,10 @@ This is a fork from https://github.com/schneidmaster/action-cable-react
 
 TODO
 
+## Install
+
+```yarn add react-native-action-cable```
+
 ## Usage
 
 The action-cable-react package exposes four modules: ActionCable, Cable. With npm or webpack-type setups, you can `require` or `import` them as usual.
