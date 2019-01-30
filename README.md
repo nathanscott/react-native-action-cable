@@ -17,7 +17,7 @@ TODO
 
 ## Usage
 
-The action-cable-react package exposes two modules: ActionCable, Cable.
+The react-native-action-cable package exposes two modules: ActionCable, Cable.
 
 Import:
 
