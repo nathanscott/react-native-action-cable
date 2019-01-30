@@ -1,5 +1,5 @@
 {
-  "name": "react-native-action-cable",
+  "name": "@kesha-antonov/react-native-action-cable",
   "version": "1.0.1",
   "description": "Use Rails 5 ActionCable channels with React Native for realtime magic.",
   "main": "index.js",
@@ -15,7 +15,7 @@
     "actioncable",
     "react native"
   ],
-  "author": "Zach Schneider <zach@schneid.io>, Innokentii Antonov",
+  "author": "Zach Schneider <zach@schneid.io>, Kesha Antonov",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/kesha-antonov/react-native-action-cable/issues"
@@ -32,5 +32,8 @@
   },
   "dependencies": {
     "eventemitter3": "3.1.0"
+  },
+  "directories": {
+    "lib": "lib"
   }
 }
