@@ -16,7 +16,7 @@ The `react-native-action-cable` package exposes two modules: ActionCable, Cable.
 
 ## Install
 
-```yarn add react-native-action-cable```
+```yarn add @kesha-antonov/react-native-action-cable```
 
 ## Usage
 
@@ -26,7 +26,7 @@ Import:
 import {
   ActionCable,
   Cable,
-} from 'react-native-action-cable'
+} from '@kesha-antonov/react-native-action-cable'
 ```
 
 Define once ActionCable and Cable in your application setup in your store (like `Redux` or `MobX`).
@@ -95,13 +95,13 @@ handleReceived = (data) => {
 
 handleConnected = () => {
   if (this.state.isWebsocketConnected) return
-  
+
   this.setState({ isWebsocketConnected: true })
 }
 
 handleDisconnected = () => {
   if (!this.state.isWebsocketConnected) return
-  
+
   this.setState({ isWebsocketConnected: false })
 }
 ```
