@@ -12,7 +12,6 @@ This is a fork from https://github.com/schneidmaster/action-cable-react
 The `react-native-action-cable` package exposes two modules: ActionCable, Cable.
 
 `ActionCable`: holds info and logic of connection and automatically tries to reconnect on loose connection.
-
 `Cable`: holds references to channels(subscriptions) created by action cable.
 
 ## Install
@@ -128,7 +127,7 @@ cable.channel('NotificationsChannel').perform('appear')
 - **`.open()`**  - try connect
 - **`.connection.isOpen()`**  - check if `connected`
 - **`.connection.isActive()`**  - check if `connected` or `connecting`
-- **`.subscriptions.create({ channel, otherParams... })`**  - create subscribtion to Rails app
+- **`.subscriptions.create({ channel, otherParams... })`**  - create subscription to Rails app
 - **`.disconnect()`**  - disconnects from Rails app
 
 
