@@ -3,21 +3,23 @@
 
 # ActionCable + React Native
 
-Use Rails 5 ActionCable channels with React Native for realtime magic.
+Use Rails 5+ ActionCable channels with React Native for realtime magic.
 
 This is a fork from https://github.com/schneidmaster/action-cable-react
 
 ## Overview
 
-TODO
+The `react-native-action-cable` package exposes two modules: ActionCable, Cable.
+
+`ActionCable`: holds info and logic of connection and automatically tries to reconnect on loose connection.
+
+`Cable`: holds references to channels(subscriptions) created by action cable.
 
 ## Install
 
 ```yarn add react-native-action-cable```
 
 ## Usage
-
-The react-native-action-cable package exposes two modules: ActionCable, Cable.
 
 Import:
 
@@ -28,21 +30,119 @@ import {
 } from 'react-native-action-cable'
 ```
 
-Define ActionCable channels in your application setup (like `App.js` or 'Store.js'). Create your consumer:
+Define once ActionCable and Cable in your application setup in your store (like `Redux` or `MobX`).
+
+Create your consumer:
 
 ```javascript
-var actionCable = ActionCable.createConsumer('ws://localhost:3000/cable');
+const actionCable = ActionCable.createConsumer('ws://localhost:3000/cable')
 ```
 
-Then, create a new Cable object with your channels:
+Right after that create Cable instance. It'll hold info of our channels.
 
 ```javascript
-var cable = new Cable({
-  ChatChannel: actionCable.subscriptions.create({channel: 'ChatChannel', room: 'example_room'}, ['newMessage'])
-});
+const cable = new Cable({})
 ```
 
-react-native-action-cable breaks slightly with the documented Rails method for creating a new channel here. It accepts either a channel name or a params object as the first argument, but as the second argument, it accepts an array of message types rather than an object of message handler definitions.
+Then, you can subscribe to channel:
+
+```javascript
+const channel = cable.setChannel(
+  `chat_${chatId}_${userId}`, // channel name to which we will pass data from Rails app with `stream_from`
+  actionCable.subscriptions.create({
+    channel: 'ChatChannel', // from Rails app app/channels/chat_channel.rb
+    chatId,
+    otherParams...
+  })
+)
+
+channel
+  .on( 'received', this.handleReceived )
+  .on( 'connected', this.handleConnected )
+  .on( 'rejected', this.handleDisconnected )
+  .on( 'disconnected', this.handleDisconnected )
+```
+
+...later we can remove event listeners and unsubscribe from channel:
+
+```javascript
+const channelName = `chat_${chatId}_${userId}`
+channel = cable.channel(channelName)
+if (channel) {
+  channel
+    .removeListener( 'received', this.handleReceived )
+    .removeListener( 'connected', this.handleConnected )
+    .removeListener( 'rejected', this.handleDisconnected )
+    .removeListener( 'disconnected', this.handleDisconnected )
+  channel.unsubscribe()
+  delete( cable.channels[channelName] )
+}
+
+```
+
+You can combine React's lifecycle hooks `componentDidMount` and `componentWillUnmount` to subscribe and unsubscribe from channels. Or implement custom logic in your `store`.
+
+Here's example how you can handle events:
+
+```
+handleReceived = (data) => {
+  switch(data.type) {
+    'new_incoming_message': {
+       this.onNewMessage(data.message)
+    }
+    ...
+  }
+}
+
+handleConnected = () => {
+  if (this.state.isWebsocketConnected) return
+  
+  this.setState({ isWebsocketConnected: true })
+}
+
+handleDisconnected = () => {
+  if (!this.state.isWebsocketConnected) return
+  
+  this.setState({ isWebsocketConnected: false })
+}
+```
+
+Send message to Rails app:
+
+```
+cable.channel(channelName).perform('send_message', { text: 'Hey' })
+
+cable.channel('NotificationsChannel').perform('appear')
+```
+
+## Methods
+
+`ActionCable` top level methods:
+
+- **`.createConsumer(websocketUrl)`**  - create actionCable consumer and start connecting
+- **`.startDebugging()`**  - start logging
+- **`.stopDebugging()`**  - stop logging
+
+`ActionCable` instance methods:
+
+- **`.open()`**  - try connect
+- **`.connection.isOpen()`**  - check if `connected`
+- **`.connection.isActive()`**  - check if `connected` or `connecting`
+- **`.subscriptions.create({ channel, otherParams... })`**  - create subscribtion to Rails app
+- **`.disconnect()`**  - disconnects from Rails app
+
+
+`Cable` instance methods:
+
+- **`.setChannel(name, actionCable.subscriptions.create())`**  - set channel to get it later
+- **`.channel(name)`**  - get channel by name
+
+`channel` methods:
+
+- **`.perform(action, data)`**  - send message to channel. action - `string`, data - `json`
+- **`.on(eventName, eventListener)`**  - subscribe to events. eventName can be `received`, `connected`, `rejected`, `disconnected`
+- **`.removeListener(eventName, eventListener)`**  - unsubscribe from event
+- **`.unsubscribe()`**  - unsubscribe from channel
 
 
 ## Contributing
