@@ -1,5 +1,5 @@
 {
-  "name": "@kesha-antonov/react-native-action-cable",
+  "name": "react-native-action-cable",
   "version": "1.0.2",
   "description": "Use Rails 5+ ActionCable channels with React Native for realtime magic.",
   "main": "index.js",
