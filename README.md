@@ -66,7 +66,7 @@ channel
 
 ```javascript
 const channelName = `chat_${chatId}_${userId}`
-channel = cable.channel(channelName)
+const channel = cable.channel(channelName)
 if (channel) {
   channel
     .removeListener( 'received', this.handleReceived )
