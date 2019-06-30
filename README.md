@@ -11,7 +11,7 @@ This is a fork from https://github.com/schneidmaster/action-cable-react
 
 The `react-native-action-cable` package exposes two modules: ActionCable, Cable.
 
-- **`ActionCable`**: holds info and logic of connection and automatically tries to reconnect on loose connection.
+- **`ActionCable`**: holds info and logic of connection and automatically tries to reconnect when connection is lost.
 - **`Cable`**: holds references to channels(subscriptions) created by action cable.
 
 ## Install
