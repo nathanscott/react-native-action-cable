@@ -97,4 +97,4 @@ class ConnectionMonitor
   clamp = (number, min, max) ->
     Math.max(min, Math.min(max, number))
 
-module.exports = ConnectionMonitor
+export default ConnectionMonitor

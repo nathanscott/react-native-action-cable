@@ -1,4 +1,4 @@
-Consumer = require('./consumer')
+Consumer = require('./consumer').default
 
 ActionCable =
   INTERNAL: require('./internal')
@@ -24,4 +24,4 @@ ActionCable =
       messages.push(Date.now())
       ActionCable.logger.log("[ActionCable]", messages...)
 
-module.exports = ActionCable
+export default ActionCable

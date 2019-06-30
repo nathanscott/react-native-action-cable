@@ -30,4 +30,4 @@ class Subscription extends EventEmitter
     data.action = if data.action? then data.action else 'received'
     @emit(data.action, data)
 
-module.exports = Subscription
+export default Subscription

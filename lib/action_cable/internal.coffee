@@ -1,4 +1,4 @@
-module.exports =
+export default {
   message_types:
     welcome: 'welcome'
     ping: 'ping'
@@ -6,3 +6,4 @@ module.exports =
     rejection: 'reject_subscription'
   default_mount_path: '/cable'
   protocols: ['actioncable-v1-json', 'actioncable-unsupported']
+}

@@ -1,7 +1,8 @@
-{message_types, protocols} = require('./internal')
-[supportedProtocols..., unsupportedProtocol] = protocols
+{message_types, protocols} = require('./internal').default
+ConnectionMonitor = require('./connection_monitor').default
 
-ConnectionMonitor = require('./connection_monitor')
+
+[supportedProtocols..., unsupportedProtocol] = protocols
 
 class Connection
   @reopenDelay: 500
@@ -120,4 +121,4 @@ class Connection
     error: ->
       @log("WebSocket onerror event")
 
-module.exports = Connection
+export default Connection

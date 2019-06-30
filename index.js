@@ -1,5 +1,4 @@
-module.exports = {
-  ActionCable: require('./dist/action_cable/action_cable'),
-  Cable: require('./dist/cable'),
-  version: require('./version')
-};
+export default {
+  ActionCable: require('./dist/action_cable/action_cable').default,
+  Cable: require('./dist/cable').default,
+}

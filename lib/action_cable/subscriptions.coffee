@@ -1,5 +1,5 @@
-INTERNAL = require('./internal')
-Subscription = require('./subscription')
+INTERNAL = require('./internal').default
+Subscription = require('./subscription').default
 
 class Subscriptions
   constructor: (@consumer) ->
@@ -60,4 +60,4 @@ class Subscriptions
     {identifier} = subscription
     @consumer.send({command, identifier})
 
-module.exports = Subscriptions
+export default Subscriptions

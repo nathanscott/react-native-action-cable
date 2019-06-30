@@ -1,5 +1,5 @@
-Connection = require('./connection')
-Subscriptions = require('./subscriptions')
+Connection = require('./connection').default
+Subscriptions = require('./subscriptions').default
 
 
 class Consumer
@@ -20,4 +20,4 @@ class Consumer
     unless @connection.isActive()
       @connection.open()
 
-module.exports = Consumer
+export default Consumer

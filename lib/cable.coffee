@@ -7,4 +7,4 @@ class Cable
   setChannel: (name, channel) =>
     @channels[name] = channel
 
-module.exports = Cable
+export default Cable
