@@ -17,9 +17,18 @@ TODO
 
 ## Usage
 
-The action-cable-react package exposes four modules: ActionCable, Cable. With npm or webpack-type setups, you can `require` or `import` them as usual.
+The react-native-action-cable package exposes two modules: ActionCable, Cable.
 
-First, you need to define your ActionCable channels in your application setup (like `app.js`). Create your consumer:
+Import:
+
+```javascript
+import {
+  ActionCable,
+  Cable,
+} from 'react-native-action-cable'
+```
+
+Define ActionCable channels in your application setup (like `App.js` or 'Store.js'). Create your consumer:
 
 ```javascript
 var actionCable = ActionCable.createConsumer('ws://localhost:3000/cable');
