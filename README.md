@@ -83,7 +83,7 @@ You can combine React's lifecycle hooks `componentDidMount` and `componentWillUn
 
 Here's example how you can handle events:
 
-```
+```javascript
 handleReceived = (data) => {
   switch(data.type) {
     'new_incoming_message': {
@@ -108,7 +108,7 @@ handleDisconnected = () => {
 
 Send message to Rails app:
 
-```
+```javascript
 cable.channel(channelName).perform('send_message', { text: 'Hey' })
 
 cable.channel('NotificationsChannel').perform('appear')
