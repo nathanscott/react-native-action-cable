@@ -26,7 +26,11 @@ class Connection
     else
       @log("Opening WebSocket, current state is #{@getState()}, subprotocols: #{protocols}")
       @uninstallEventHandlers() if @webSocket?
-      @webSocket = new @WebSocket(@consumer.url, protocols)
+      if @consumer.jwt?
+        @webSocket = new @WebSocket(@consumer.url, protocols.concat(@consumer.jwt))
+        @webSocket.protocol = 'actioncable-v1-json'
+      else
+        @webSocket = new @WebSocket(@consumer.url, protocols)
       @installEventHandlers()
       @monitor.start()
       true
